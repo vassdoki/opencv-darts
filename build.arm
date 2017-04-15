@@ -1,0 +1,1 @@
+mvn package -Dplatform=linux-armhf -Djavacpp.platform=linux-armhf -Djavacpp.platform.dependency=false
