@@ -1,0 +1,62 @@
+<DartsConfig>
+    <SAVE_CAPTURED>0</SAVE_CAPTURED> <!-- save the captured images to OUTPUT_DIR -->
+    <USE_SAVED_IMAGES>1</USE_SAVED_IMAGES> <!-- 0: use the camera, 1: use the saved images -->
+    <START_OVER>1</START_OVER> <!-- in case of USE_SAVED_IMAGES == 1, 1: restart from the beginning of the file list -->
+    <OUTPUT_DIR>/tmp/</OUTPUT_DIR> <!-- directory to save captured images, if SAVE_CAPTURED == 1 -->
+    <INPUT_DIR>example/sample-images/</INPUT_DIR> <!-- directory to read all files from if USE_SAVED_IMAGES == 1 -->
+
+    <SERVER_URL>http://192.168.3.60:8080/cam/command</SERVER_URL> <!-- save result to url if SERVER_USE == 1 -->
+    <SERVER_USE>0</SERVER_USE> <!-- turn on web scoreboard -->
+
+    <DEBUG_DART_FINDER>0</DEBUG_DART_FINDER>
+    <DEBUG_MAIN>0</DEBUG_MAIN>
+    <DEBUG_PROFILE>0</DEBUG_PROFILE>
+    <DEBUG_CAMERA_PROPERTIES>0</DEBUG_CAMERA_PROPERTIES>
+
+    <camera name="vassdoki test setup right" camId="1">
+        <videoDeviceNumber>1</videoDeviceNumber> <!-- /dev/videoX value -->
+        <area> <!-- area of interest on the captured image, this should be absolutely white, if there are no darts in the board -->
+            <x>0</x>
+            <y>156</y>
+            <width>639</width>
+            <height>44</height>
+            <zeroy>220</zeroy> <!-- he y coordinate of the dartboard's surface -->
+        </area>
+        <threshold> <!-- in the grayscale image, pixels between min and max are considered to be part of the background -->
+            <min>130</min>
+            <max>255</max>
+        </threshold>
+        <pos> <!-- position of the camera in the dartbard's coordiate system (where bull is 400,400 and the radius is 300 -->
+            <camx>953</camx>
+            <camy>-102</camy>
+            <leftx>636</leftx>
+            <lefty>654</lefty>
+            <rightx>164</rightx>
+            <righty>138</righty>
+        </pos>
+    </camera>
+
+
+    <camera name="vassdoki test setup left" camId="2">
+        <videoDeviceNumber>2</videoDeviceNumber>
+        <area>
+            <x>0</x>
+            <y>232</y>
+            <width>639</width>
+            <height>43</height>
+            <zeroy>293</zeroy>
+        </area>
+        <threshold>
+            <min>200</min>
+            <max>255</max>
+        </threshold>
+        <pos>
+            <camx>-111</camx>
+            <camy>-142</camy>
+            <leftx>662</leftx>
+            <lefty>155</lefty>
+            <rightx>140</rightx>
+            <righty>645</righty>
+        </pos>
+    </camera>
+</DartsConfig>
