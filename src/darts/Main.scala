@@ -1,6 +1,6 @@
 package darts
 
-import java.io.File
+import java.io.{File, PrintWriter}
 
 import org.bytedeco.javacpp.indexer.DoubleRawIndexer
 import org.bytedeco.javacpp.opencv_core._
@@ -32,34 +32,75 @@ object Main extends App{
   var prevDartsCount1 = 0
   var prevDartsCount2 = 0
 
-  saveCalibratingImages
+//  saveCalibratingImages
 //  config
 //  test2
+
+  override def main(args: Array[String]): Unit = {
+    if (args.size != 1) {
+      printHelp
+    } else {
+      args(0) match {
+        case "-config" => config
+        case "-calib" => saveCalibratingImages
+        case "-run" => test2
+        case _ => printHelp
+      }
+    }
+  }
+
+  def printHelp = {
+    println
+      """
+        |Usage: java -jar darts.jar [command]
+        |Commands:
+        | -run       Run the recognition
+        | -config    Show the captured images, but do not report results
+        | -calib     Save calibration data
+        |
+        | You may change the content of the config.xml any time, the program
+        | will reload it.
+      """.stripMargin
+  }
 
   def saveCalibratingImages = {
     val points = List(6, 13, 4, 18, 1, 20, 5, 12, 9, 14, 11, 8, 16, 7, 19, 3, 17, 2, 15, 10, "bu", "finished")
 
     val capture1 = new CaptureDevice("1")
     val camConf1 = new Config("1")
+    val dartFinder1 = new DartFinder(capture1, camConf1)
+    dartFinder1.state = dartFinder1.State.ALWAYS_ON
     val capture2 = new CaptureDevice("2")
     val camConf2 = new Config("2")
+    val dartFinder2 = new DartFinder(capture2, camConf2)
+    dartFinder2.state = dartFinder2.State.ALWAYS_ON
     var i1 = new Mat
     var i2 = new Mat
+    var x1 = 0f
+    var x2 = 0f
     i1 = capture1.captureFrame(i1)
     i2 = capture2.captureFrame(i2)
-    val maxCounter = 200
+    val maxCounter = 50
     var counter = maxCounter
     var savedImages = 0
     val debug2 = new Mat(i1.rows, i1.cols * 2, 16)
-    while(true) {
+    var result = ""
+    while(savedImages < 21) {
       debug2.setTo(BlackMat)
 
       //i1 = calib1.remap(capture1.captureFrame(i1))
       i1 = capture1.captureFrame(i1)
       i2 = capture2.captureFrame(i2)
+
+      x1 = dartFinder1.proc(null, null, i1)
+      x2 = dartFinder2.proc(null, null, i2)
+
       if (counter <= 0 && savedImages < points.size - 1) {
-        imwrite(f"${Config.str("CALIB_DIR")}/d1-${points(savedImages)}.jpg", i1)
-        imwrite(f"${Config.str("CALIB_DIR")}/d2-${points(savedImages)}.jpg", i2)
+        result = result + f"CalibPoint1;${points(savedImages)};${x1/camConf1.int("area/width")}%15f;$x1;${camConf1.int("area/zeroy")}\n"
+        result = result + f"CalibPoint2;${points(savedImages)};${x2/camConf2.int("area/width")}%15f;$x2;${camConf2.int("area/zeroy")}\n"
+//        println(result)
+//        imwrite(f"${Config.str("CALIB_DIR")}/d1-${points(savedImages)}.jpg", i1)
+//        imwrite(f"${Config.str("CALIB_DIR")}/d2-${points(savedImages)}.jpg", i2)
         savedImages += 1
         counter = maxCounter
       }
@@ -79,6 +120,9 @@ object Main extends App{
       counter -= 1
     }
     debug2.release()
+    val pw = new PrintWriter(new File("calib_points.csv" ))
+    pw.write(result)
+    pw.close()
   }
 
   def calibrateCamera(camNum: String, savedAlready: Boolean): CameraCalibrator = {
@@ -250,12 +294,12 @@ object Main extends App{
 
         Profile.start("02 - dartFinder1")
         val f1 = Future {
-          dartFinder1.proc(debug2, null)
+          dartFinder1.proc(debug2, null, null)
         }
         Profile.end("02 - dartFinder1")
         Profile.start("02 - dartFinder2")
         val f2 = Future {
-          dartFinder2.proc(debug2, null)
+          dartFinder2.proc(debug2, null, null)
         }
         Profile.end("02 - dartFinder2")
         Profile.start("02 - await")
