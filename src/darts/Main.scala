@@ -271,7 +271,8 @@ object Main extends App{
         if (dartFineder2.state == dartFineder1.State.EMPTY) prevDartsCount2 = 0
         if (
           (prevDartsCount1 < dartFineder1.dartsCount || prevDartsCount2 < dartFineder2.dartsCount)
-            && (dartFineder1.state == dartFineder1.State.STABLE && dartFineder1.state == dartFineder1.State.STABLE)
+            && (dartFineder1.state == dartFineder1.State.STABLE && dartFineder2.state == dartFineder2.State.STABLE)
+            && (dartFineder1.dartsCount <= 3 && dartFineder2.dartsCount <= 3)
         ) {
           var xc = (dartFineder2.lastB - dartFineder1.lastB) / (dartFineder1.lastA - dartFineder2.lastA)
           var yc = xc * dartFineder1.lastA + dartFineder1.lastB
