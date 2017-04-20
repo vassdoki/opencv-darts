@@ -2,8 +2,6 @@ package darts
 
 import java.io.File
 
-import darts.CvUtil
-import darts.DartsUtil
 import org.bytedeco.javacpp.indexer.DoubleRawIndexer
 import org.bytedeco.javacpp.opencv_core._
 import org.bytedeco.javacpp.opencv_imgcodecs.{IMREAD_COLOR, imread, imwrite}
@@ -34,9 +32,9 @@ object Main extends App{
   var prevDartsCount1 = 0
   var prevDartsCount2 = 0
 
-//  saveCalibratingImages
+  saveCalibratingImages
 //  config
-  test2
+//  test2
 
   def saveCalibratingImages = {
     val points = List(6, 13, 4, 18, 1, 20, 5, 12, 9, 14, 11, 8, 16, 7, 19, 3, 17, 2, 15, 10, "bu", "finished")
@@ -47,19 +45,14 @@ object Main extends App{
     val camConf2 = new Config("2")
     var i1 = new Mat
     var i2 = new Mat
+    i1 = capture1.captureFrame(i1)
+    i2 = capture2.captureFrame(i2)
     val maxCounter = 200
     var counter = maxCounter
     var savedImages = 0
-    val debug2 = new Mat(800, 800, 16)
+    val debug2 = new Mat(i1.rows, i1.cols * 2, 16)
     while(true) {
       debug2.setTo(BlackMat)
-      putText(debug2, s"$counter next target: ${points(savedImages)}", new Point(30, 100),
-        FONT_HERSHEY_PLAIN, // font type
-        2, // font scale
-        Red, // text color (here white)
-        3, // text thickness
-        8, // Line type.
-        false)
 
       //i1 = calib1.remap(capture1.captureFrame(i1))
       i1 = capture1.captureFrame(i1)
@@ -71,13 +64,17 @@ object Main extends App{
         counter = maxCounter
       }
       drawKivagas(i1, camConf1)
-      Util.show(i1, s"i1")
-      //i2 = calib2.remap(capture2.captureFrame(i2))
       drawKivagas(i2, camConf2)
-      Util.show(i2, s"i2")
 
-//      drawCamDebug(debug2, camConf1)
-//      drawCamDebug(debug2, camConf2)
+      i1.copyTo(debug2(new Rect(0,0,i1.cols,i1.rows)))
+      i2.copyTo(debug2(new Rect(i1.cols,0,i1.cols,i1.rows)))
+      putText(debug2, s"$counter next target: ${points(savedImages)}", new Point(30, 100),
+        FONT_HERSHEY_PLAIN, // font type
+        2, // font scale
+        Red, // text color (here white)
+        3, // text thickness
+        8, // Line type.
+        false)
       Util.show(debug2, s"cam config")
       counter -= 1
     }
@@ -225,8 +222,8 @@ object Main extends App{
     val camConf1 = new Config("1")
     val camConf2 = new Config("2")
 
-    val dartFineder1 = new DartFinder(new CaptureDevice("1"), camConf1)
-    val dartFineder2 = new DartFinder(new CaptureDevice("2"), camConf2)
+    val dartFinder1 = new DartFinder(new CaptureDevice("1"), camConf1)
+    val dartFinder2 = new DartFinder(new CaptureDevice("2"), camConf2)
 
     var i3 = new Mat
     var debug3:Mat = null
@@ -253,12 +250,12 @@ object Main extends App{
 
         Profile.start("02 - dartFinder1")
         val f1 = Future {
-          dartFineder1.proc(debug2, null)
+          dartFinder1.proc(debug2, null)
         }
         Profile.end("02 - dartFinder1")
         Profile.start("02 - dartFinder2")
         val f2 = Future {
-          dartFineder2.proc(debug2, null)
+          dartFinder2.proc(debug2, null)
         }
         Profile.end("02 - dartFinder2")
         Profile.start("02 - await")
@@ -267,21 +264,21 @@ object Main extends App{
 
         Profile.end("02 - await")
         imgCount += 1
-        if (dartFineder1.state == dartFineder1.State.EMPTY) prevDartsCount1 = 0
-        if (dartFineder2.state == dartFineder1.State.EMPTY) prevDartsCount2 = 0
+        if (dartFinder1.state == dartFinder1.State.EMPTY) prevDartsCount1 = 0
+        if (dartFinder2.state == dartFinder1.State.EMPTY) prevDartsCount2 = 0
         if (
-          (prevDartsCount1 < dartFineder1.dartsCount || prevDartsCount2 < dartFineder2.dartsCount)
-            && (dartFineder1.state == dartFineder1.State.STABLE && dartFineder2.state == dartFineder2.State.STABLE)
-            && (dartFineder1.dartsCount <= 3 && dartFineder2.dartsCount <= 3)
+          (prevDartsCount1 < dartFinder1.dartsCount || prevDartsCount2 < dartFinder2.dartsCount)
+            && (dartFinder1.state == dartFinder1.State.STABLE && dartFinder2.state == dartFinder2.State.STABLE)
+            && (dartFinder1.dartsCount <= 3 && dartFinder2.dartsCount <= 3)
         ) {
-          var xc = (dartFineder2.lastB - dartFineder1.lastB) / (dartFineder1.lastA - dartFineder2.lastA)
-          var yc = xc * dartFineder1.lastA + dartFineder1.lastB
+          var xc = (dartFinder2.lastB - dartFinder1.lastB) / (dartFinder1.lastA - dartFinder2.lastA)
+          var yc = xc * dartFinder1.lastA + dartFinder1.lastB
           val point = new Point(xc.toInt, yc.toInt)
 
           val (mod, num) = DartsUtil.identifyNumber(point)
-          println(f"${(imgCount.toFloat / (System.currentTimeMillis() - start)) * 1000}%.1f fps num: $num mod: $mod   (${dartFineder1.dartsCount}[${dartFineder1.state}] ${dartFineder2.dartsCount}[${dartFineder2.state}])")
-          prevDartsCount1 = dartFineder1.dartsCount
-          prevDartsCount2 = dartFineder2.dartsCount
+          println(f"${(imgCount.toFloat / (System.currentTimeMillis() - start)) * 1000}%.1f fps num: $num mod: $mod   (${dartFinder1.dartsCount}[${dartFinder1.state}] ${dartFinder2.dartsCount}[${dartFinder2.state}])")
+          prevDartsCount1 = dartFinder1.dartsCount
+          prevDartsCount2 = dartFinder2.dartsCount
 
           if (Config.bool("SERVER_USE")) {
             val url = s"${Config.str("SERVER_URL")}?num=$num&modifier=$mod"
