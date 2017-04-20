@@ -34,18 +34,16 @@ object Main extends App{
 
 //  saveCalibratingImages
 //  config
-//  test2
+  //  test2
 
-  override def main(args: Array[String]): Unit = {
-    if (args.size != 1) {
-      printHelp
-    } else {
-      args(0) match {
-        case "-config" => config
-        case "-calib" => saveCalibratingImages
-        case "-run" => test2
-        case _ => printHelp
-      }
+  if (args.size != 1) {
+    printHelp
+  } else {
+    args(0) match {
+      case "-config" => config
+      case "-calib" => saveCalibratingImages
+      case "-run" => test2
+      case _ => printHelp
     }
   }
 
@@ -229,10 +227,10 @@ object Main extends App{
       new Point(conf.int("area/x"), conf.int("area/y")),
       new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y"))),
       Cyan, 1, 4, 0)
-//    line(m,
-//      new Point(10, 10),
-//      new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y") - conf.int("area/height"))),
-//      Green, 1, 4, 0)
+    //    line(m,
+    //      new Point(10, 10),
+    //      new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y") - conf.int("area/height"))),
+    //      Green, 1, 4, 0)
     line(m,
       new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y"))),
       new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y") + conf.int("area/height"))),
@@ -384,8 +382,5 @@ object Main extends App{
     Profile.end("01 - App")
     Profile.print
   }
-
-
-
 
 }
