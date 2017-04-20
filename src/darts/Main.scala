@@ -78,7 +78,7 @@ object Main extends App{
     var x2 = 0f
     i1 = capture1.captureFrame(i1)
     i2 = capture2.captureFrame(i2)
-    val maxCounter = 50
+    val maxCounter = 25
     var counter = maxCounter
     var savedImages = 0
     val debug2 = new Mat(i1.rows, i1.cols * 2, 16)
@@ -105,9 +105,21 @@ object Main extends App{
       drawKivagas(i1, camConf1)
       drawKivagas(i2, camConf2)
 
+      println(s"x1: $x1 x2: $x2")
+      circle(i1, new Point(x1.toInt, camConf1.int("zeroy")), 3, Red, 4, LINE_AA, 0)
+      circle(i2, new Point(x2.toInt, camConf2.int("zeroy")), 3, Red, 4, LINE_AA, 0)
+
+
       i1.copyTo(debug2(new Rect(0,0,i1.cols,i1.rows)))
       i2.copyTo(debug2(new Rect(i1.cols,0,i1.cols,i1.rows)))
       putText(debug2, s"$counter next target: ${points(savedImages)}", new Point(30, 100),
+        FONT_HERSHEY_PLAIN, // font type
+        2, // font scale
+        Red, // text color (here white)
+        3, // text thickness
+        8, // Line type.
+        false)
+      putText(debug2, s"x1: $x1     x2: $x2", new Point(30, 140),
         FONT_HERSHEY_PLAIN, // font type
         2, // font scale
         Red, // text color (here white)
@@ -290,21 +302,15 @@ object Main extends App{
         //      i3 = capture3.captureFrame(i3)
         //      Util.show(i3, s"i3")
 
-        Profile.start("02 - dartFinder1")
-        val f1 = Future {
+//        val f1 = Future {
           dartFinder1.proc(debug2, null, null)
-        }
-        Profile.end("02 - dartFinder1")
-        Profile.start("02 - dartFinder2")
-        val f2 = Future {
+//        }
+//        val f2 = Future {
           dartFinder2.proc(debug2, null, null)
-        }
-        Profile.end("02 - dartFinder2")
-        Profile.start("02 - await")
-        val r1 = Await.result(f1, 2 second)
-        val r2 = Await.result(f2, 2 second)
+//        }
+//        val r1 = Await.result(f1, 2 second)
+//        val r2 = Await.result(f2, 2 second)
 
-        Profile.end("02 - await")
         imgCount += 1
         if (dartFinder1.state == dartFinder1.State.EMPTY) prevDartsCount1 = 0
         if (dartFinder2.state == dartFinder1.State.EMPTY) prevDartsCount2 = 0
@@ -333,13 +339,13 @@ object Main extends App{
             CvUtil.drawTable(debug2, Cyan, 2)
             CvUtil.drawNumbers(debug2, Yellow)
 
-            //          circle(debug2, new Point(x1.toInt, y1.toInt), 3, Red, 4, LINE_AA, 0)
-            //          line(debug2, new Point(camConf1.int("camx"), camConf1.int("camy")), new Point(50, (50 * a1 + b1).toInt), Cyan, 1, 4, 0)
-            //          line(debug2, new Point(camConf1.int("leftx"), camConf1.int("lefty")), new Point(camConf1.int("rightx"), camConf1.int("righty")), Yellow, 1, 4, 0)
-            //
-            //          circle(debug2, new Point(x2.toInt, y2.toInt), 3, Red, 4, LINE_AA, 0)
-            //          line(debug2, new Point(camConf2.int("camx"), camConf2.int("camy")), new Point(750, (750 * a2 + b2).toInt), Cyan, 1, 4, 0)
-            //          line(debug2, new Point(camConf2.int("leftx"), camConf2.int("lefty")), new Point(camConf2.int("rightx"), camConf2.int("righty")), Yellow, 1, 4, 0)
+//            circle(debug2, new Point(x1.toInt, y1.toInt), 3, Red, 4, LINE_AA, 0)
+            line(debug2, new Point(camConf1.int("camx"), camConf1.int("camy")), new Point(50, (50 * dartFinder1.lastA + dartFinder1.lastB).toInt), Cyan, 1, 4, 0)
+            line(debug2, new Point(camConf1.int("leftx"), camConf1.int("lefty")), new Point(camConf1.int("rightx"), camConf1.int("righty")), Yellow, 1, 4, 0)
+
+//            circle(debug2, new Point(x2.toInt, y2.toInt), 3, Red, 4, LINE_AA, 0)
+            line(debug2, new Point(camConf2.int("camx"), camConf2.int("camy")), new Point(750, (750 * dartFinder2.lastA + dartFinder2.lastB).toInt), Cyan, 1, 4, 0)
+            line(debug2, new Point(camConf2.int("leftx"), camConf2.int("lefty")), new Point(camConf2.int("rightx"), camConf2.int("righty")), Yellow, 1, 4, 0)
 
             points.add(point)
             if (prevPoint != null) circle(debug2, prevPoint, 2, Green, 2, LINE_AA, 0)
