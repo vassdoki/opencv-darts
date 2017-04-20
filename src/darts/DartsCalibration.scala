@@ -371,7 +371,7 @@ object DartsCalibration extends App{
     for (line <- bufferedSource.getLines) {
       val c = line.split(";").map(_.trim)
       if (c(0) == s"CalibPoint$camNum") {
-        calibPoints += CalibPoint(c(1).toDouble, c(2).toFloat, c(3).toFloat, num2coord.get(c(6)).get._1, num2coord.get(c(6)).get._2, c(6))
+        calibPoints += CalibPoint(c(2).toDouble, c(3).toFloat, c(4).toFloat, num2coord.get(c(1)).get._1, num2coord.get(c(1)).get._2, c(1))
       }
     }
 //    calibPoints map (c =>     println(s"CalibPoint${camNum};${c.ratio};${c.x};${c.y};${c.boardX};${c.boardY};${c.name}"))

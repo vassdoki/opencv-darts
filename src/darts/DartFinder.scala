@@ -56,26 +56,21 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     *
     * @param debug
     * @param calib
-    * @return (x1, y1, x, y): (x1, y1) is the calculated position on the dart board. (x, y) is where the
-    *         dart hit the board on the camera image
+    * @return x (x, y) is where the dart hit the board on the camera image. y is always zeroy from the config.
     */
-  def proc(debug: Mat, calib: CameraCalibrator): Float = {
-    Profile.start("03 - proc", camConf.id)
+  def proc(debug: Mat, calib: CameraCalibrator, pImage: Mat): Float = {
     var image = new Mat
     //i2 = calib.remap(capture2.captureFrame(i2))
-    Profile.start("04 - capture", camConf.id)
-    image = capture.captureFrame(image)
-    Profile.end("04 - capture", camConf.id)
+    if (pImage == null) {
+      image = capture.captureFrame(image)
+    } else {
+      pImage.copyTo(image)
+    }
 
-    Profile.start("04 - image copy", camConf.id)
     val debug: Mat = new Mat
     if (Config.bool("DEBUG_DART_FINDER")) image.copyTo(debug)
-    Profile.start("04 - image copy", camConf.id)
 
-    Profile.start("04 - findDartOnImage", camConf.id)
     val (a, b) = findDartOnImage(image, debug)
-    Profile.end("04 - findDartOnImage", camConf.id)
-    Profile.start("04 - if", camConf.id)
     if (a > -99999) {
       // x is the pixels from the left side of the image taken inside the area. this coordinate is from the side view
       val (x, y) = getYintersectionWithBoardSurface(a, b, camConf)
@@ -94,13 +89,11 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
       val x1 = camConf.int("pos/leftx") + (x / camConf.int("area/width")) * (camConf.int("pos/rightx") - camConf.int("pos/leftx"))
       val y1 = camConf.int("pos/lefty") + (x / camConf.int("area/width")) * (camConf.int("pos/righty") - camConf.int("pos/lefty"))
 
-      (x1, y1, x, y)
       // lastA, lastB is the parameters of the line goint from the camera through the point where the dart hit the board
       // the equation is: aX + B = y
       lastA = (y1 - camConf.int("camy")) / (x1 - camConf.int("camx"))
       lastB = y1 - lastA * x1
     }
-    Profile.end("04 - if", camConf.id)
 
     if (Config.bool("DEBUG_DART_FINDER")) {
       val dmask = new Mat(prevMask.size(), prevMask.`type`())
@@ -138,7 +131,6 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
 
     CvUtil.releaseMat(debug)
 //    CvUtil.releaseMat(image)
-    Profile.end("03 - proc", camConf.id)
     lastA
   }
 
@@ -154,9 +146,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     val mask: Mat = new Mat
     getNewMask(srcOrigParam, mask)
 
-    Profile.start("06 - countNonZero", camConf.id)
     val cNonZero = countNonZero(mask)
-    Profile.end("06 - countNonZero", camConf.id)
 
     val mState = (prevNonZeroCount, cNonZero) match {
       case (p, c) if (c < MinChange) => MaskState.EMPTY
@@ -233,13 +223,9 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
   def processStableMask(pMask: Mat, cNonZero: Int, srcOrigParam: Mat, debug: Mat): (Float, Float) = {
     // this makes the image more robust. The small holes will disappera.
     // but if there are two darts close to eachother, it might fill the gap, that's no good
-    Profile.start("05 - mask.Copy", camConf.id)
     var mask = new Mat(pMask.size, pMask.`type`())
     pMask.copyTo(mask)
-    Profile.end("05 - mask.Copy", camConf.id)
-    Profile.start("05 - dilaErode", camConf.id)
     dilaErod(mask, er7, er7)
-    Profile.end("05 - dilaErode", camConf.id)
 
     val nonZero = new Mat
     if (stableNonZeroCount > 0) {
@@ -247,9 +233,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
       mask.setTo(Config.BlackMat, stableMask)
     }
     dilate(mask, mask, er3)
-    Profile.start("05 - findNonZero", camConf.id)
     findNonZero(mask, nonZero)
-    Profile.end("05 - findNonZero", camConf.id)
     CvUtil.releaseMat(mask)
     if (nonZero.rows > 0) {
       Util.lineFitForAB(nonZero, camConf.id)
@@ -291,17 +275,11 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     */
   def getNewMask(srcOrigParam: Mat, mask: Mat): Mat = {
     val srcOrig = new Mat
-    Profile.start("07 - cvtColor", camConf.id)
     // TODO: cvtColor is a slow method based on the profiling. Use it only on the are, not the whole image.
     cvtColor(srcOrigParam, srcOrig, CV_RGB2GRAY)
-    Profile.end("07 - cvtColor", camConf.id)
     val src2 = srcOrig(new Rect(camConf.int("area/x"), camConf.int("area/y"), camConf.int("area/width"), camConf.int("area/height")))
-    Profile.start("07 - threshold", camConf.id)
     threshold(src2, mask, camConf.int("threshold/min"), camConf.int("threshold/max"), THRESH_BINARY)
-    Profile.end("07 - threshold", camConf.id)
-    Profile.start("07 - bitwise_not", camConf.id)
     bitwise_not(mask, mask)
-    Profile.end("07 - bitwise_not", camConf.id)
     srcOrig.release
     src2.release
     mask
