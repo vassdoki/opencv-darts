@@ -12,6 +12,8 @@
     <DEBUG_MAIN>0</DEBUG_MAIN>
     <DEBUG_PROFILE>0</DEBUG_PROFILE>
     <DEBUG_CAMERA_PROPERTIES>0</DEBUG_CAMERA_PROPERTIES>
+    <DEBUG_FPS>0</DEBUG_FPS> <!-- print FPS info to stdout -->
+
 
     <camera name="vassdoki test setup right" camId="1">
         <videoDeviceNumber>1</videoDeviceNumber> <!-- /dev/videoX value -->

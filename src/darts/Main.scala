@@ -42,7 +42,7 @@ object Main extends App{
     args(0) match {
       case "-config" => config
       case "-calib" => saveCalibratingImages
-      case "-run" => test2
+      case "-run" => run
       case _ => printHelp
     }
   }
@@ -50,7 +50,7 @@ object Main extends App{
   def printHelp = {
     println
       """
-        |Usage: java -jar darts.jar [command]
+          |Usage: java -jar darts.jar [command]
         |Commands:
         | -run       Run the recognition
         | -config    Show the captured images, but do not report results
@@ -269,7 +269,7 @@ object Main extends App{
 
   }
 
-  def test2 = {
+  def run = {
     Profile.start("01 - App")
     println(s"CPU cores: ${Runtime.getRuntime().availableProcessors()}")
 
@@ -302,14 +302,14 @@ object Main extends App{
         //      i3 = capture3.captureFrame(i3)
         //      Util.show(i3, s"i3")
 
-//        val f1 = Future {
+        val f1 = Future {
           dartFinder1.proc(debug2, null, null)
-//        }
-//        val f2 = Future {
+        }
+        val f2 = Future {
           dartFinder2.proc(debug2, null, null)
-//        }
-//        val r1 = Await.result(f1, 2 second)
-//        val r2 = Await.result(f2, 2 second)
+        }
+        val r1 = Await.result(f1, 2 second)
+        val r2 = Await.result(f2, 2 second)
 
         imgCount += 1
         if (dartFinder1.state == dartFinder1.State.EMPTY) prevDartsCount1 = 0
@@ -339,11 +339,11 @@ object Main extends App{
             CvUtil.drawTable(debug2, Cyan, 2)
             CvUtil.drawNumbers(debug2, Yellow)
 
-//            circle(debug2, new Point(x1.toInt, y1.toInt), 3, Red, 4, LINE_AA, 0)
+            //            circle(debug2, new Point(x1.toInt, y1.toInt), 3, Red, 4, LINE_AA, 0)
             line(debug2, new Point(camConf1.int("camx"), camConf1.int("camy")), new Point(50, (50 * dartFinder1.lastA + dartFinder1.lastB).toInt), Cyan, 1, 4, 0)
             line(debug2, new Point(camConf1.int("leftx"), camConf1.int("lefty")), new Point(camConf1.int("rightx"), camConf1.int("righty")), Yellow, 1, 4, 0)
 
-//            circle(debug2, new Point(x2.toInt, y2.toInt), 3, Red, 4, LINE_AA, 0)
+            //            circle(debug2, new Point(x2.toInt, y2.toInt), 3, Red, 4, LINE_AA, 0)
             line(debug2, new Point(camConf2.int("camx"), camConf2.int("camy")), new Point(750, (750 * dartFinder2.lastA + dartFinder2.lastB).toInt), Cyan, 1, 4, 0)
             line(debug2, new Point(camConf2.int("leftx"), camConf2.int("lefty")), new Point(camConf2.int("rightx"), camConf2.int("righty")), Yellow, 1, 4, 0)
 
@@ -377,6 +377,9 @@ object Main extends App{
 
             Util.show(debug2, s"debug2")
           }
+        }
+        if (Config.bool("DEBUG_FPS")) {
+          println(f"${(imgCount.toFloat / (System.currentTimeMillis() - start)) * 1000}%.1f fps")
         }
       }
     }catch {

@@ -18,7 +18,11 @@ class CaptureDevice(val id: String) {
   var lastOrigFilename: String = null
 
   val camConf = Config.getConfig(id)
-  lazy val capture: VideoCapture = new VideoCapture(camConf.int("videoDeviceNumber"))
+  val capture: VideoCapture = if (Config.bool("USE_SAVED_IMAGES")) {
+    null
+  } else {
+    new VideoCapture(camConf.int("videoDeviceNumber"))
+  }
   var fileList = Seq.empty[File]
 
   if (Config.bool("USE_SAVED_IMAGES")) fileList = readFiles
