@@ -24,6 +24,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
   var lastA = 0f // in Ax + B = y. line from tha camera on the board
   var lastB = 0f
 
+  val er9   = new Mat(9, 9, CV_8U, new Scalar(1d))
   val er7   = new Mat(7, 7, CV_8U, new Scalar(1d))
   val er5   = new Mat(5, 5, CV_8U, new Scalar(1d))
   val er3   = new Mat(3, 3, CV_8U, new Scalar(1d))
@@ -71,9 +72,15 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     if (Config.bool("DEBUG_DART_FINDER")) image.copyTo(debug)
 
     val (a, b) = findDartOnImage(image, debug)
+    var x = 0f
+    var y = 0f
+    var x1 = 0f
+    var y1 = 0f
     if (a > -99999) {
       // x is the pixels from the left side of the image taken inside the area. this coordinate is from the side view
-      val (x, y) = getYintersectionWithBoardSurface(a, b, camConf)
+      val t = getYintersectionWithBoardSurface(a, b, camConf)
+      x = t._1
+      y = t._2
       val startPoint = new Point(camConf.int("area/x") + ((1 - b) / a).toInt, camConf.int("area/y") + 1)
       val endPoint = new Point(camConf.int("area/x") + x.toInt, camConf.int("area/y") + y.toInt)
 
@@ -86,8 +93,8 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
 
       // x1, y1 represents the intersection point on the yellow line.
       // (the yellow line represents the camera view on the board's coordinate system)
-      val x1 = camConf.int("pos/leftx") + (x / camConf.int("area/width")) * (camConf.int("pos/rightx") - camConf.int("pos/leftx"))
-      val y1 = camConf.int("pos/lefty") + (x / camConf.int("area/width")) * (camConf.int("pos/righty") - camConf.int("pos/lefty"))
+      x1 = camConf.int("pos/leftx") + (x / camConf.int("area/width")) * (camConf.int("pos/rightx") - camConf.int("pos/leftx"))
+      y1 = camConf.int("pos/lefty") + (x / camConf.int("area/width")) * (camConf.int("pos/righty") - camConf.int("pos/lefty"))
 
       // lastA, lastB is the parameters of the line goint from the camera through the point where the dart hit the board
       // the equation is: aX + B = y
@@ -131,7 +138,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
 
     CvUtil.releaseMat(debug)
 //    CvUtil.releaseMat(image)
-    lastA
+    x
   }
 
   /**
@@ -211,12 +218,12 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
 
   def saveStableMask = {
     newStableMask.copyTo(stableMask)
-    dilaErod(stableMask, er7, er5)
+    dilaErod(stableMask, er9, er5)
     stableNonZeroCount = newStableNonZeroCount
   }
   def saveNewStableMask = {
     prevMask.copyTo(newStableMask)
-    dilaErod(newStableMask, er7, er5)
+    dilaErod(newStableMask, er9, er5)
     newStableNonZeroCount = prevNonZeroCount
   }
 
@@ -225,7 +232,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     // but if there are two darts close to eachother, it might fill the gap, that's no good
     var mask = new Mat(pMask.size, pMask.`type`())
     pMask.copyTo(mask)
-    dilaErod(mask, er7, er7)
+    dilaErod(mask, er9, er9)
 
     val nonZero = new Mat
     if (stableNonZeroCount > 0) {
