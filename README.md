@@ -36,8 +36,8 @@ The videoDeviceNumber is important.
 
 Run the program using the -config switch:
 
-```
-java -jar darts-1.0.jar -config
+```bash
+java -jar darts-1.0-jar-with-dependencies.jar -config
 ```
 
 This will show the image from the two cameras. 
@@ -70,7 +70,7 @@ But you can't see it right now in the config view <= TBD (run the jar with the -
 First save data for the calibration
 
 ```bash
-java -jar darts-1.0.jar -calib
+java -jar darts-1.0-jar-with-dependencies.jar -calib
 ```
 
 Place the dart in the far right tripple corner of the number shown on the screen. Keep
@@ -78,6 +78,9 @@ Place the dart in the far right tripple corner of the number shown on the screen
  dot is where the dart is pointing.
 
 After this process a calib_points.csv is saved. Run the calibration.
+```bash
+java -cp darts-1.0-jar-with-dependencies.jar darts.DartsCalibration
+```
 There is no switch for that now. But it would run slowly on the rpi, so I would
 copy the csv to a strong computer, and raun the DartsCalibration.scala there.
 TBD: make this easier.
@@ -92,7 +95,7 @@ Setup the scoreboard server: https://github.com/IPeter/darts-go
 ## Run the system
 
 ```bash
-java -jar darts-1.0.jar -calib
+java -jar darts-1.0-jar-with-dependencies.jar -calib
 ```
 
 This is just a quick first version of the readme. Create an issue if you have any problems.
