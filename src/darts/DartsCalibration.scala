@@ -131,7 +131,7 @@ object DartsCalibration extends App{
     while(min < prevMin) {
       prevMin = min
       val res: Seq[(Int, Int, Double)] = for (i <- camPoint.x - size to camPoint.x + size; j <- camPoint.y - size to camPoint.y + size)
-        yield (i, j, getSumDiffByRatio(new Point(i, j), false))
+        yield (i, j, getSumDiffByRatio2(new Point(i, j), false))
       val minRes = res.filter(_._3 == res.map(_._3).min).head
       println(s"minRes: ${minRes._3} i: ${minRes._1} x ${minRes._3} ===========================================================================")
       min = minRes._3
@@ -139,7 +139,7 @@ object DartsCalibration extends App{
     }
     circle(debug, new Point(camPoint.x + xOffset, camPoint.y + yOffset), 3, Config.Cyan, 2, LINE_AA, 0)
     Util.show(debug, s"Calibrating $camNum")
-    getSumDiffByRatio(camPoint, true)
+//    getSumDiffByRatio(camPoint, true)
 //    getSumDiffByRatio2(camPoint, true)
 //    getSumDiffByRatio3(camPoint, true)
     // ------------------------------------------------

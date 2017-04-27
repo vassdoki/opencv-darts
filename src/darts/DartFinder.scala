@@ -13,6 +13,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
 
   var origImage = new Mat // taken by the camera
   var prevMask: Mat = new Mat(camConf.int("area/height"), camConf.int("area/width"), CV_8U)
+  var prevProcessed: Mat = new Mat(camConf.int("area/height"), camConf.int("area/width"), CV_8U)
   var prevNonZeroCount = 0
   var stableMask: Mat = new Mat(camConf.int("area/height"), camConf.int("area/width"), CV_8U)
   var stableNonZeroCount = 0
@@ -114,8 +115,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     cvtColor(prevMask, dmask, CV_GRAY2BGR)
     dmask.copyTo(debug(new Rect(0, debug.rows - prevMask.rows, prevMask.cols, prevMask.rows)))
 
-    dmask.setTo(Config.BlackMat, stableMask)
-    dilate(dmask, dmask, er3)
+    cvtColor(prevProcessed, dmask, CV_GRAY2BGR)
     dmask.copyTo(debug(new Rect(0, debug.rows - (prevMask.rows * 2), prevMask.cols, prevMask.rows)))
 
     cvtColor(stableMask, dmask, CV_GRAY2BGR)
@@ -130,7 +130,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
       1, // text thickness
       1, // Line type.
       false)
-    putText(debug, f"a: $lineFromCamA%f b: $lineFromCamB%f", new Point(20, 50),
+    putText(debug, f"x: ${lastX} a: $lineFromCamA%f b: $lineFromCamB%f", new Point(20, 40),
       FONT_HERSHEY_PLAIN, // font type
       1, // font scale
       Config.Red, // text color (here white)
@@ -270,6 +270,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     var mask = new Mat(pMask.size, pMask.`type`())
     pMask.copyTo(mask)
     dilaErod(mask, er9, er9)
+//    eroDila(mask, er3, er3)
 
     val nonZero = new Mat
     if (stableNonZeroCount > 0) {
@@ -277,6 +278,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
       mask.setTo(Config.BlackMat, stableMask)
     }
     dilate(mask, mask, er3)
+    mask.copyTo(prevProcessed)
     findNonZero(mask, nonZero)
     CvUtil.releaseMat(mask)
     if (nonZero.rows > 0) {
@@ -287,17 +289,28 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
   }
 
   /**
-    * Dilate and then erode the image to get rid of holes.
+    * Dilate and then erode the image to get rid of holes. (Closing operation)
     * @param mask
     * @param d dilate matrix
     * @param e erode matrix
     */
   def dilaErod(mask: Mat, d: Mat, e: Mat) = {
-//    Util.show(mask, s"before XXX ${camConf.id}")
     if (d != null) dilate(mask, mask, d)
     if (e != null) erode(mask, mask, e)
-//    Util.show(mask, s"after XXX ${camConf.id}")
   }
+
+  /**
+    * Erode and then dilate the image to get rid of small parts. (Opening operation)
+    * @param mask
+    * @param e erode matrix
+    * @param d dilate matrix
+    */
+  def eroDila(mask: Mat, e: Mat, d: Mat) = {
+    if (e != null) erode(mask, mask, e)
+    if (d != null) dilate(mask, mask, d)
+  }
+
+
   /**
     * Given the line (ax + b) from the image, returns where the dart hit the board on the image (x, y)
     * @param a
