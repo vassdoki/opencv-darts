@@ -11,6 +11,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
   val MinChange = 40
   val MinStable = 3
 
+  var origImage = new Mat // taken by the camera
   var prevMask: Mat = new Mat(camConf.int("area/height"), camConf.int("area/width"), CV_8U)
   var prevNonZeroCount = 0
   var stableMask: Mat = new Mat(camConf.int("area/height"), camConf.int("area/width"), CV_8U)
@@ -19,17 +20,30 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
   var newStableNonZeroCount = 0
 
   var state = State.EMPTY
+  var maskState = MaskState.EMPTY
+  
   var stableCount = 0
   var dartsCount = 0
-  var lastA = 0f // in Ax + B = y. line from tha camera on the board
+
+  var lastA = 0f
   var lastB = 0f
+
+  var lastX = 0f // lastX, zeroY is where the line from lastA,lastB intersect with the red line (zeroy)
+  var lastY = 0f
+  // yellowX, yellowY represents the intersection point on the yellow line from the camera.
+  // (the yellow line represents the camera view on the board's coordinate system)
+  var yellowX = 0f
+  var yellowY = 0f
+  // lineFromCamA, lineFromCamB is the parameters of the line goint from the camera through the point where the dart hit the board
+  // the equation is: Ax + B = y
+  var lineFromCamA = 0f // in Ax + B = y. line from tha camera on the board
+  var lineFromCamB = 0f
 
   val er9   = new Mat(9, 9, CV_8U, new Scalar(1d))
   val er7   = new Mat(7, 7, CV_8U, new Scalar(1d))
   val er5   = new Mat(5, 5, CV_8U, new Scalar(1d))
   val er3   = new Mat(3, 3, CV_8U, new Scalar(1d))
 
-  var image = new Mat
 
   /**
     * ALWAYS_ON is a constant running version ONLY for one dart detection. Useful for testing.
@@ -37,12 +51,11 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
   object State extends Enumeration {
     val EMPTY, CHANGING, PRESTABLE, STABLE, REMOVING, ALWAYS_ON = Value
   }
+
   object MaskState extends Enumeration {
     val EMPTY = Value // the mask is empty => always goes to EMPTY state
     val CHANGING = Value // has more changed pixels => always go to CHANGING state
-
     val MIN_CHANGE = Value // prev and curr is almost the same
-
   }
 
   case class PrevThrow(
@@ -55,91 +68,115 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
   /**
     * Read an image from the camera. Find the dart on it, find its intersection with the dart board.
     *
-    * @param debug
-    * @param calib
+    * @param pImage if null, then read from the capture device, or use this image
     * @return x (x, y) is where the dart hit the board on the camera image. y is always zeroy from the config.
     */
-  def proc(debug: Mat, calib: CameraCalibrator, pImage: Mat): Float = {
-    var image = new Mat
-    //i2 = calib.remap(capture2.captureFrame(i2))
+  def proc(pImage: Mat): Float = {
     if (pImage == null) {
-      image = capture.captureFrame(image)
+      origImage = capture.captureFrame(origImage)
     } else {
-      pImage.copyTo(image)
+      pImage.copyTo(origImage)
     }
 
-    val debug: Mat = new Mat
-    if (Config.bool("DEBUG_DART_FINDER")) image.copyTo(debug)
-
-    val (a, b) = findDartOnImage(image, debug)
-    var x = 0f
-    var y = 0f
-    var x1 = 0f
-    var y1 = 0f
+    val (a, b) = findDartOnImage(origImage)
     if (a > -99999) {
+      lastA = a
+      lastB = b
       // x is the pixels from the left side of the image taken inside the area. this coordinate is from the side view
       val t = getYintersectionWithBoardSurface(a, b, camConf)
-      x = t._1
-      y = t._2
-      val startPoint = new Point(camConf.int("area/x") + ((1 - b) / a).toInt, camConf.int("area/y") + 1)
-      val endPoint = new Point(camConf.int("area/x") + x.toInt, camConf.int("area/y") + y.toInt)
+      lastX = t._1
+      lastY = t._2
 
-      line(debug, startPoint, endPoint, Config.Cyan, 2, 4, 0)
-      circle(debug, new Point(x.toInt, y.toInt + camConf.int("area/y")), 2, Config.Red, 2, LINE_AA, 0)
+      yellowX = camConf.int("pos/leftx") + (lastX / camConf.int("area/width")) * (camConf.int("pos/rightx") - camConf.int("pos/leftx"))
+      yellowY = camConf.int("pos/lefty") + (lastX / camConf.int("area/width")) * (camConf.int("pos/righty") - camConf.int("pos/lefty"))
 
-      //      line(debug, new Point(camConf.int("pos/leftx"), camConf.int("pos/lefty")),
-      //        new Point(camConf.int("pos/rightx"), camConf.int("pos/righty")), Yellow, 1, 4, 0)
-      //      circle(debug, new Point(camConf.int("pos/camx"), camConf.int("pos/camy")), 2, Yellow, 2, LINE_AA, 0)
-
-      // x1, y1 represents the intersection point on the yellow line.
-      // (the yellow line represents the camera view on the board's coordinate system)
-      x1 = camConf.int("pos/leftx") + (x / camConf.int("area/width")) * (camConf.int("pos/rightx") - camConf.int("pos/leftx"))
-      y1 = camConf.int("pos/lefty") + (x / camConf.int("area/width")) * (camConf.int("pos/righty") - camConf.int("pos/lefty"))
-
-      // lastA, lastB is the parameters of the line goint from the camera through the point where the dart hit the board
-      // the equation is: aX + B = y
-      lastA = (y1 - camConf.int("camy")) / (x1 - camConf.int("camx"))
-      lastB = y1 - lastA * x1
+      lineFromCamA = (yellowY - camConf.int("camy")) / (yellowX - camConf.int("camx"))
+      lineFromCamB = yellowY - lineFromCamA * yellowX
     }
 
-    if (Config.bool("DEBUG_DART_FINDER")) {
-      val dmask = new Mat(prevMask.size(), prevMask.`type`())
-
-      cvtColor(prevMask, dmask, CV_GRAY2BGR)
-      dmask.copyTo(debug(new Rect(0, debug.rows - prevMask.rows, prevMask.cols, prevMask.rows)))
-
-      dmask.setTo(Config.BlackMat, stableMask)
-      dilate(dmask, dmask, er3)
-      dmask.copyTo(debug(new Rect(0, debug.rows - (prevMask.rows * 2), prevMask.cols, prevMask.rows)))
-
-      cvtColor(stableMask, dmask, CV_GRAY2BGR)
-      dmask.copyTo(debug(new Rect(0, debug.rows - (prevMask.rows * 3), prevMask.cols, prevMask.rows)))
-
-      Main.drawKivagas(debug, camConf)
-
-      putText(debug, s"prevNonZero: $prevNonZeroCount state: $state dartsCount: $dartsCount stableCount: $stableCount", new Point(20, 20),
-        FONT_HERSHEY_PLAIN, // font type
-        1, // font scale
-        Config.Red, // text color (here white)
-        1, // text thickness
-        1, // Line type.
-        false)
-      putText(debug, f"a: $a%f b: $b%f", new Point(20, 50),
-        FONT_HERSHEY_PLAIN, // font type
-        1, // font scale
-        Config.Red, // text color (here white)
-        1, // text thickness
-        1, // Line type.
-        false)
-
-      Util.show(debug, s"debug ${camConf.id}")
-      CvUtil.releaseMat(dmask)
-    }
-
-    CvUtil.releaseMat(debug)
-//    CvUtil.releaseMat(image)
-    x
+    lastX
   }
+
+  def debugLastProc: Mat = {
+    val debug: Mat = new Mat
+    origImage.copyTo(debug)
+
+    // Ax + b = y
+    // x = (y - b) / A
+    val startPoint = new Point(camConf.int("area/x") + ((1 - lastB) / lastA).toInt, camConf.int("area/y") + 1)
+    val endPoint =   new Point(camConf.int("area/x") + lastX.toInt,                 camConf.int("area/y") + lastY.toInt)
+
+    line(debug, startPoint, endPoint, Config.Cyan, 2, 4, 0)
+    circle(debug, new Point(camConf.int("area/x") + lastX.toInt, lastY.toInt + camConf.int("area/y")), 2, Config.Red, 2, LINE_AA, 0)
+
+    val dmask = new Mat(prevMask.size(), prevMask.`type`())
+
+    cvtColor(prevMask, dmask, CV_GRAY2BGR)
+    dmask.copyTo(debug(new Rect(0, debug.rows - prevMask.rows, prevMask.cols, prevMask.rows)))
+
+    dmask.setTo(Config.BlackMat, stableMask)
+    dilate(dmask, dmask, er3)
+    dmask.copyTo(debug(new Rect(0, debug.rows - (prevMask.rows * 2), prevMask.cols, prevMask.rows)))
+
+    cvtColor(stableMask, dmask, CV_GRAY2BGR)
+    dmask.copyTo(debug(new Rect(0, debug.rows - (prevMask.rows * 3), prevMask.cols, prevMask.rows)))
+
+    drawConfigArea(debug)
+
+    putText(debug, s"prevNonZero: $prevNonZeroCount maskState: $maskState state: $state dartsCount: $dartsCount stableCount: $stableCount", new Point(20, 20),
+      FONT_HERSHEY_PLAIN, // font type
+      1, // font scale
+      Config.Red, // text color (here white)
+      1, // text thickness
+      1, // Line type.
+      false)
+    putText(debug, f"a: $lineFromCamA%f b: $lineFromCamB%f", new Point(20, 50),
+      FONT_HERSHEY_PLAIN, // font type
+      1, // font scale
+      Config.Red, // text color (here white)
+      1, // text thickness
+      1, // Line type.
+      false)
+
+//    Util.show(debug, s"debug ${camConf.id}")
+    CvUtil.releaseMat(dmask)
+
+    debug
+  }
+
+  def drawConfigArea(m: Mat) = {
+    line(m,
+      new Point(camConf.int("area/x"), camConf.int("area/y")),
+      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y"))),
+      Config.Cyan, 1, 4, 0)
+    //    line(m,
+    //      new Point(10, 10),
+    //      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y") - camConf.int("area/height"))),
+    //      Green, 1, 4, 0)
+    line(m,
+      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y"))),
+      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y") + camConf.int("area/height"))),
+      Config.Cyan, 1, 4, 0)
+    line(m,
+      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y") + camConf.int("area/height"))),
+      new Point(camConf.int("area/x"), (camConf.int("area/y") + camConf.int("area/height"))),
+      Config.Cyan, 1, 4, 0)
+    line(m,
+      new Point(camConf.int("area/x"), (camConf.int("area/y") + camConf.int("area/height"))),
+      new Point(camConf.int("area/x"), (camConf.int("area/y"))),
+      Config.Cyan, 1, 4, 0)
+
+    line(m,
+      new Point(camConf.int("area/x"), camConf.int("area/zeroy")),
+      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/zeroy"))),
+      Config.Red, 1, 4, 0)
+
+    line(m,
+      new Point(camConf.int("area/x") + camConf.int("width")/2, (camConf.int("area/y"))),
+      new Point(camConf.int("area/x") + camConf.int("width")/2, (camConf.int("area/y") + camConf.int("area/height"))),
+      Config.Yellow, 1, 4, 0)
+  }
+
 
   /**
     * Returns the dart found on the image by (a, b) in the equation: y = ax + b
@@ -147,7 +184,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     * @param srcOrigParam
     * @return
     */
-  def findDartOnImage(srcOrigParam: Mat, debug: Mat):(Float, Float) = {
+  def findDartOnImage(srcOrigParam: Mat):(Float, Float) = {
     var (resA, resB) = (-99999f,-99999f)
 
     val mask: Mat = new Mat
@@ -155,16 +192,16 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
 
     val cNonZero = countNonZero(mask)
 
-    val mState = (prevNonZeroCount, cNonZero) match {
+    maskState = (prevNonZeroCount, cNonZero) match {
       case (p, c) if (c < MinChange) => MaskState.EMPTY
       case (p, c) if (Math.abs(c - p) < MinChange) => MaskState.MIN_CHANGE
       case (p, c) if (Math.abs(c - p) >= MinChange) => MaskState.CHANGING
     }
 
-    (state, mState) match {
+    (state, maskState) match {
       case (State.ALWAYS_ON, m) => {
         // stay here unless EMPTY
-        val x = processStableMask(mask, cNonZero, srcOrigParam, debug)
+        val x = processStableMask(mask, cNonZero, srcOrigParam)
         resA = x._1; resB = x._2
       }
       case (State.EMPTY, MaskState.MIN_CHANGE) => {
@@ -198,7 +235,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
         state = State.STABLE
         dartsCount += 1
         saveNewStableMask
-        val x = processStableMask(mask, cNonZero, srcOrigParam, debug)
+        val x = processStableMask(mask, cNonZero, srcOrigParam)
         resA = x._1; resB = x._2
       }
       case (State.STABLE, MaskState.MIN_CHANGE) => {
@@ -227,7 +264,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     newStableNonZeroCount = prevNonZeroCount
   }
 
-  def processStableMask(pMask: Mat, cNonZero: Int, srcOrigParam: Mat, debug: Mat): (Float, Float) = {
+  def processStableMask(pMask: Mat, cNonZero: Int, srcOrigParam: Mat): (Float, Float) = {
     // this makes the image more robust. The small holes will disappera.
     // but if there are two darts close to eachother, it might fill the gap, that's no good
     var mask = new Mat(pMask.size, pMask.`type`())

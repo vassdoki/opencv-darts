@@ -50,7 +50,7 @@ object Main extends App{
   def printHelp = {
     println
       """
-          |Usage: java -jar darts.jar [command]
+        |Usage: java -jar darts.jar [command]
         |Commands:
         | -run       Run the recognition
         | -config    Show the captured images, but do not report results
@@ -90,8 +90,8 @@ object Main extends App{
       i1 = capture1.captureFrame(i1)
       i2 = capture2.captureFrame(i2)
 
-      x1 = dartFinder1.proc(null, null, i1)
-      x2 = dartFinder2.proc(null, null, i2)
+      x1 = dartFinder1.proc(i1)
+      x2 = dartFinder2.proc(i2)
 
       if (counter <= 0 && savedImages < points.size - 1) {
         result = result + f"CalibPoint1;${points(savedImages)};${x1/camConf1.int("area/width")}%15f;$x1;${camConf1.int("area/zeroy")}\n"
@@ -102,16 +102,18 @@ object Main extends App{
         savedImages += 1
         counter = maxCounter
       }
-      drawKivagas(i1, camConf1)
-      drawKivagas(i2, camConf2)
+//      drawKivagas(i1, camConf1)
+//      drawKivagas(i2, camConf2)
+//
+//      println(s"x1: $x1 x2: $x2")
+//      circle(i1, new Point(x1.toInt, camConf1.int("zeroy")), 3, Red, 4, LINE_AA, 0)
+//      circle(i2, new Point(x2.toInt, camConf2.int("zeroy")), 3, Red, 4, LINE_AA, 0)
 
-      println(s"x1: $x1 x2: $x2")
-      circle(i1, new Point(x1.toInt, camConf1.int("zeroy")), 3, Red, 4, LINE_AA, 0)
-      circle(i2, new Point(x2.toInt, camConf2.int("zeroy")), 3, Red, 4, LINE_AA, 0)
+      val d1 = dartFinder1.debugLastProc
+      val d2 = dartFinder2.debugLastProc
 
-
-      i1.copyTo(debug2(new Rect(0,0,i1.cols,i1.rows)))
-      i2.copyTo(debug2(new Rect(i1.cols,0,i1.cols,i1.rows)))
+      d1.copyTo(debug2(new Rect(0,0,i1.cols,i1.rows)))
+      d2.copyTo(debug2(new Rect(i1.cols,0,i1.cols,i1.rows)))
       putText(debug2, s"$counter next target: ${points(savedImages)}", new Point(30, 100),
         FONT_HERSHEY_PLAIN, // font type
         2, // font scale
@@ -127,6 +129,8 @@ object Main extends App{
         8, // Line type.
         false)
       Util.show(debug2, s"cam config")
+      CvUtil.releaseMat(d1)
+      CvUtil.releaseMat(d2)
       counter -= 1
     }
     debug2.release()
@@ -214,11 +218,12 @@ object Main extends App{
     while(true) {
       //i1 = calib1.remap(capture1.captureFrame(i1))
       i1 = capture1.captureFrame(i1)
-      drawKivagas(i1, camConf1)
+//      drawKivagas(i1, camConf1)
+      println("NOT IMPLEMENTED!")
       Util.show(i1, s"i1")
       //i2 = calib2.remap(capture2.captureFrame(i2))
       i2 = capture2.captureFrame(i2)
-      drawKivagas(i2, camConf2)
+//      drawKivagas(i2, camConf2)
       Util.show(i2, s"i2")
     }
   }
@@ -231,41 +236,6 @@ object Main extends App{
       new Point(conf.int("leftx"), conf.int("lefty")), Cyan, 1, 4, 0)
     line(m, new Point(conf.int("camx"), conf.int("camy")),
       new Point(conf.int("rightx"), conf.int("righty")), Cyan, 1, 4, 0)
-
-  }
-
-  def drawKivagas(m: Mat, conf: Config) = {
-    line(m,
-      new Point(conf.int("area/x"), conf.int("area/y")),
-      new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y"))),
-      Cyan, 1, 4, 0)
-    //    line(m,
-    //      new Point(10, 10),
-    //      new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y") - conf.int("area/height"))),
-    //      Green, 1, 4, 0)
-    line(m,
-      new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y"))),
-      new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y") + conf.int("area/height"))),
-      Cyan, 1, 4, 0)
-    line(m,
-      new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/y") + conf.int("area/height"))),
-      new Point(conf.int("area/x"), (conf.int("area/y") + conf.int("area/height"))),
-      Cyan, 1, 4, 0)
-    line(m,
-      new Point(conf.int("area/x"), (conf.int("area/y") + conf.int("area/height"))),
-      new Point(conf.int("area/x"), (conf.int("area/y"))),
-      Cyan, 1, 4, 0)
-
-    line(m,
-      new Point(conf.int("area/x"), conf.int("area/zeroy")),
-      new Point(conf.int("area/x") + conf.int("width"), (conf.int("area/zeroy"))),
-      Red, 1, 4, 0)
-
-    line(m,
-      new Point(conf.int("area/x") + conf.int("width")/2, (conf.int("area/y"))),
-      new Point(conf.int("area/x") + conf.int("width")/2, (conf.int("area/y") + conf.int("area/height"))),
-      Yellow, 1, 4, 0)
-
 
   }
 
@@ -303,10 +273,10 @@ object Main extends App{
         //      Util.show(i3, s"i3")
 
         val f1 = Future {
-          dartFinder1.proc(debug2, null, null)
+          dartFinder1.proc(null)
         }
         val f2 = Future {
-          dartFinder2.proc(debug2, null, null)
+          dartFinder2.proc(null)
         }
         val r1 = Await.result(f1, 2 second)
         val r2 = Await.result(f2, 2 second)
@@ -319,8 +289,8 @@ object Main extends App{
             && (dartFinder1.state == dartFinder1.State.STABLE && dartFinder2.state == dartFinder2.State.STABLE)
             && (dartFinder1.dartsCount <= 3 && dartFinder2.dartsCount <= 3)
         ) {
-          var xc = (dartFinder2.lastB - dartFinder1.lastB) / (dartFinder1.lastA - dartFinder2.lastA)
-          var yc = xc * dartFinder1.lastA + dartFinder1.lastB
+          var xc = (dartFinder2.lineFromCamB - dartFinder1.lineFromCamB) / (dartFinder1.lineFromCamA - dartFinder2.lineFromCamA)
+          var yc = xc * dartFinder1.lineFromCamA + dartFinder1.lineFromCamB
           val point = new Point(xc.toInt, yc.toInt)
 
           val (mod, num) = DartsUtil.identifyNumber(point)
@@ -340,11 +310,11 @@ object Main extends App{
             CvUtil.drawNumbers(debug2, Yellow)
 
             //            circle(debug2, new Point(x1.toInt, y1.toInt), 3, Red, 4, LINE_AA, 0)
-            line(debug2, new Point(camConf1.int("camx"), camConf1.int("camy")), new Point(50, (50 * dartFinder1.lastA + dartFinder1.lastB).toInt), Cyan, 1, 4, 0)
+            line(debug2, new Point(camConf1.int("camx"), camConf1.int("camy")), new Point(50, (50 * dartFinder1.lineFromCamA + dartFinder1.lineFromCamB).toInt), Cyan, 1, 4, 0)
             line(debug2, new Point(camConf1.int("leftx"), camConf1.int("lefty")), new Point(camConf1.int("rightx"), camConf1.int("righty")), Yellow, 1, 4, 0)
 
             //            circle(debug2, new Point(x2.toInt, y2.toInt), 3, Red, 4, LINE_AA, 0)
-            line(debug2, new Point(camConf2.int("camx"), camConf2.int("camy")), new Point(750, (750 * dartFinder2.lastA + dartFinder2.lastB).toInt), Cyan, 1, 4, 0)
+            line(debug2, new Point(camConf2.int("camx"), camConf2.int("camy")), new Point(750, (750 * dartFinder2.lineFromCamA + dartFinder2.lineFromCamB).toInt), Cyan, 1, 4, 0)
             line(debug2, new Point(camConf2.int("leftx"), camConf2.int("lefty")), new Point(camConf2.int("rightx"), camConf2.int("righty")), Yellow, 1, 4, 0)
 
             points.add(point)
