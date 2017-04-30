@@ -211,19 +211,20 @@ object Main extends App{
   def config = {
     val capture1 = new CaptureDevice("1")
     val camConf1 = new Config("1")
+    val dartFinder1 = new DartFinder(capture1, camConf1)
+    dartFinder1.state = dartFinder1.State.ALWAYS_ON
     val capture2 = new CaptureDevice("2")
     val camConf2 = new Config("2")
+    val dartFinder2 = new DartFinder(capture2, camConf2)
+    dartFinder2.state = dartFinder2.State.ALWAYS_ON
     var i1 = new Mat
     var i2 = new Mat
     while(true) {
-      //i1 = calib1.remap(capture1.captureFrame(i1))
-      i1 = capture1.captureFrame(i1)
-//      drawKivagas(i1, camConf1)
-      println("NOT IMPLEMENTED!")
+      dartFinder1.proc(null)
+      i1 = dartFinder1.debugLastProc
       Util.show(i1, s"i1")
-      //i2 = calib2.remap(capture2.captureFrame(i2))
-      i2 = capture2.captureFrame(i2)
-//      drawKivagas(i2, camConf2)
+      dartFinder2.proc(null)
+      i2 = dartFinder2.debugLastProc
       Util.show(i2, s"i2")
     }
   }
