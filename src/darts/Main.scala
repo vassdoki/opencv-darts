@@ -36,7 +36,7 @@ object Main extends App{
 //  config
   //  test2
 
-  if (args.size != 1) {
+  if (args.length != 1) {
     printHelp
   } else {
     args(0) match {
@@ -241,7 +241,7 @@ object Main extends App{
 
   def run = {
     Profile.start("01 - App")
-    println(s"CPU cores: ${Runtime.getRuntime().availableProcessors()}")
+    println(s"CPU cores: ${Runtime.getRuntime.availableProcessors()}")
 
     val camConf1 = new Config("1")
     val camConf2 = new Config("2")
@@ -262,7 +262,7 @@ object Main extends App{
     var prevPoint: Point = null
     var prevTrPoint: Point = null
 
-    val points = new HashSet[Point]
+    val points = new mutable.HashSet[Point]
 
     try {
       while (true) {
@@ -353,10 +353,9 @@ object Main extends App{
         }
       }
     }catch {
-      case e: Exception => {
+      case e: Exception =>
         println(e)
         e.printStackTrace()
-      }
     }
     Profile.end("01 - App")
     Profile.print

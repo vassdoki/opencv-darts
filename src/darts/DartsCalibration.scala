@@ -45,8 +45,8 @@ object DartsCalibration extends App{
                        ,angle: Double      // view angle from the camera to the two points used to calculate the view angle circle
                        )
 
-  checkCalibration
-//  println(s"Camera 1 new calibration:\n${calibrateNewByXY("1")}")
+//  checkCalibration
+  println(s"Camera 1 new calibration:\n${calibrateNewByXY("1")}")
 //  println(s"Camera 2 new calibration:\n${calibrateNewByXY("2")}")
 //  println(s"Camera 1 calibration:\n${calibrateByXY("1")}")
 //  println(s"Camera 2 calibration:\n${calibrateByXY("2")}")
@@ -56,7 +56,7 @@ object DartsCalibration extends App{
     val camConf2 = new Config("2")
 
     debug.setTo(Config.BlackMat)
-    distancesFromBull map { dist => circle(debug, bullOffset, dist.toInt, Config.Cyan, 1, 8, 0) }
+    distancesFromBull foreach { dist => circle(debug, bullOffset, dist.toInt, Config.Cyan, 1, 8, 0) }
 
     readCalibrationCsv("1")
 
@@ -110,16 +110,12 @@ object DartsCalibration extends App{
   }
 
   def calibrateNewByXY(camNum: String): String = {
-    var result = ""
     println(s"-------------------- $camNum -------------------")
 
     debug.setTo(Config.BlackMat)
-    distancesFromBull map { dist => circle(debug, bullOffset, dist.toInt, Config.Cyan, 1, 8, 0) }
+    distancesFromBull foreach { dist => circle(debug, bullOffset, dist.toInt, Config.Cyan, 1, 8, 0) }
 
     readCalibrationCsv(camNum)
-
-    //    val res = getSumDiffByRatio2(new Point(933, -133), true)
-    //    println(f"RES:      $res")
 
     val redGreenInters = guessCameraPosition
     var camPoint = new Point(redGreenInters._1.toInt, redGreenInters._2.toInt)
@@ -130,6 +126,7 @@ object DartsCalibration extends App{
 
     while(min < prevMin) {
       prevMin = min
+      // TODO: here we might calculate the same point multiple times...
       val res: Seq[(Int, Int, Double)] = for (i <- camPoint.x - size to camPoint.x + size; j <- camPoint.y - size to camPoint.y + size)
         yield (i, j, getSumDiffByRatio2(new Point(i, j), false))
       val minRes = res.filter(_._3 == res.map(_._3).min).head
@@ -143,35 +140,19 @@ object DartsCalibration extends App{
 //    getSumDiffByRatio2(camPoint, true)
 //    getSumDiffByRatio3(camPoint, true)
     // ------------------------------------------------
-    // now find the yellow line based on the calibration information. this is very not precise
     val angleToBull = CvUtil.getDegree(camPoint, bull)
     val leftPoint = CvUtil.rotatePoint(bull, angleToBull.toFloat + 90, 400f)
     val rightPoint = CvUtil.rotatePoint(bull, angleToBull.toFloat - 90, 400f)
-    var minDiffSum = 9999d
-    var minSides: (Point, Point) = null
-    calibPoints.foreach(c => {
-      val inters = CvUtil.lineIntersection(camPoint, new Point(c.boardX, c.boardY), leftPoint, rightPoint)
-      val bullDistance = CvUtil.getDistance(bull, inters)
-      val fullDistance = bullDistance / Math.abs(0.5-c.ratio)
-      val cleftPoint =  CvUtil.rotatePoint(bull, angleToBull.toFloat + 90, (fullDistance/2).toInt)
-      val crightPoint = CvUtil.rotatePoint(bull, angleToBull.toFloat - 90, (fullDistance/2).toInt)
-      val diffSum = getSumDiffByPoints(camPoint, cleftPoint, crightPoint, false)
-      if (diffSum < minDiffSum) {
-        minDiffSum = diffSum
-        minSides = (cleftPoint, crightPoint)
-        result = s"<camx>${camPoint.x}</camx>\n<camy>${camPoint.y}</camy>\n<leftx>${cleftPoint.x}</leftx>\n<lefty>${cleftPoint.y}</lefty>\n<rightx>${crightPoint.x}</rightx>\n<righty>${crightPoint.y}</righty>\n"
-      }
-      //      println(f"num: ${c.name}%2s sumDiffRatio: ${diffSum*100000}%8.2f " +
-      //        f"<leftx>${cleftPoint.x}</leftx><lefty>${cleftPoint.y}</lefty>" +
-      //        f"<rightx>${crightPoint.x}</rightx><righty>${crightPoint.y}</righty>  fullDistance: $fullDistance%.2f")
+    val (resLeftPoint, resRightPoint, result) = calcYellowLine(leftPoint, rightPoint, camPoint)
+    Util.show(debug, s"Calibrating $camNum")
+    result
+  }
 
-      circle(debug, new Point(cleftPoint.x + xOffset, cleftPoint.y + yOffset), 2, Config.Yellow, 2, LINE_AA, 0)
-      circle(debug, new Point(crightPoint.x + xOffset, crightPoint.y + yOffset), 2, Config.Red, 2, LINE_AA, 0)
-    })
-    println(f"Smallest error: ${minDiffSum*100000}%.7f / 100000")
-
+  def calcYellowLine(leftPoint: Point, rightPoint: Point, camPoint: Point): (Point, Point, String) = {
+    var minSides = (leftPoint, rightPoint)
     var minDiff = 9999d
     val cSize = 3
+    var result = ""
     // fine tune the yellow line's position based on the best value from the calibration info
     // try every position in the cSize neighbourhood
     val cache = mutable.HashMap.empty[String, Double]
@@ -188,9 +169,9 @@ object DartsCalibration extends App{
           val crightPoint = new Point(minSides._2.x + ri, minSides._2.y + rj)
           val key = s"cleft: ${cleftPoint.x}x${cleftPoint.y} cright: ${crightPoint.x}x${crightPoint.y}"
           val diffSum: Double = if (cache.contains(key)) {
-            cache.get(key).get
+            cache(key)
           } else {
-            val x = getSumDiffByPoints(camPoint, cleftPoint, crightPoint, false)
+            val x = getSumDiffByPoints(camPoint, cleftPoint, crightPoint, printDebug = false)
             cache.put(key, x)
             x
           }
@@ -207,10 +188,7 @@ object DartsCalibration extends App{
       println(s"minDiff: ${minDiff*100000} prevDiff: ${prevMinDiff*100000} nextLeft: ${nextLeft.x}x${nextLeft.y} nextRight: ${nextRight.x}x${nextRight.y}")
     }
     println(f"minDiff: ${minDiff*100000}%.2f / 100000")
-
-    Util.show(debug, s"Calibrating $camNum")
-    result
-
+    (nextLeft, nextRight, result)
   }
 
   /**
@@ -273,114 +251,6 @@ object DartsCalibration extends App{
     res
   }
 
-
-  def calibrateByXY(camNum: String): String = {
-    var result = ""
-    println(s"-------------------- $camNum -------------------")
-
-    calibPoints.clear()
-    calibPointsSorted.clear()
-
-    debug.setTo(Config.BlackMat)
-    distancesFromBull map { dist => circle(debug, bullOffset, dist.toInt, Config.Cyan, 1, 8, 0) }
-
-    readCalibrationCsv(camNum)
-
-    // guess a good starting point
-    val redGreenInters = guessCameraPosition
-    val redGreenIntersPoint = new Point(redGreenInters._1.toInt-1, redGreenInters._2.toInt)
-//    Util.show(debug, s"Calibrating guessed camera $camNum")
-
-    var minDiff = 9999d
-    var camPoint: Point = redGreenIntersPoint
-    var continue = true
-    while(continue) {
-      // change the position of the camera until there is a better placement of it
-      val x = getBestCamPoint(camPoint, minDiff, camNum)
-      if (x._2 <= minDiff && x._1 != null) {
-        minDiff = x._2
-        camPoint = x._1
-//        continue = false
-//        println(f"minDiff: $minDiff%.6f    camera: ${camPoint.x} x ${camPoint.y}")
-      } else {
-//        println(f"minDiff: $minDiff%.6f    camera: ${camPoint.x} x ${camPoint.y} ez mar nem kisebb")
-        continue = false
-      }
-    }
-
-    // we have the position of the camera:
-    circle(debug, new Point(camPoint.x + xOffset, camPoint.y + yOffset), 3, Config.Cyan, 2, LINE_AA, 0)
-
-    // now find the yellow line based on the calibration information. this is very not precise
-    val angleToBull = CvUtil.getDegree(camPoint, bull)
-    val leftPoint = CvUtil.rotatePoint(bull, angleToBull.toFloat + 90, 400f)
-    val rightPoint = CvUtil.rotatePoint(bull, angleToBull.toFloat - 90, 400f)
-//    var minDiffSum = 9999d
-//    var minSides: (Point, Point) = null
-//    calibPoints.foreach(c => {
-//      val inters = CvUtil.lineIntersection(camPoint, new Point(c.boardX, c.boardY), leftPoint, rightPoint)
-//      val bullDistance = CvUtil.getDistance(bull, inters)
-//      val fullDistance = bullDistance / Math.abs(0.5-c.ratio)
-//      val cleftPoint =  CvUtil.rotatePoint(bull, angleToBull.toFloat + 90, (fullDistance/2).toInt)
-//      val crightPoint = CvUtil.rotatePoint(bull, angleToBull.toFloat - 90, (fullDistance/2).toInt)
-//      val diffSum = getSumDiffByPoints(camPoint, cleftPoint, crightPoint, false)
-//      if (diffSum < minDiffSum) {
-//        minDiffSum = diffSum
-//        minSides = (cleftPoint, crightPoint)
-//        result = s"<camx>${camPoint.x}</camx>\n<camy>${camPoint.y}</camy>\n<leftx>${cleftPoint.x}</leftx>\n<lefty>${cleftPoint.y}</lefty>\n<rightx>${crightPoint.x}</rightx>\n<righty>${crightPoint.y}</righty>\n"
-//      }
-////      println(f"num: ${c.name}%2s sumDiffRatio: ${diffSum*100000}%8.2f " +
-////        f"<leftx>${cleftPoint.x}</leftx><lefty>${cleftPoint.y}</lefty>" +
-////        f"<rightx>${crightPoint.x}</rightx><righty>${crightPoint.y}</righty>  fullDistance: $fullDistance%.2f")
-//
-//      circle(debug, new Point(cleftPoint.x + xOffset, cleftPoint.y + yOffset), 2, Config.Yellow, 2, LINE_AA, 0)
-//      circle(debug, new Point(crightPoint.x + xOffset, crightPoint.y + yOffset), 2, Config.Red, 2, LINE_AA, 0)
-//    })
-//    println(f"Smallest error: ${minDiffSum*100000}%.7f / 100000")
-
-    var minSides = (leftPoint, rightPoint)
-//    var minDiff = 9999d
-    val cSize = 5
-    // fine tune the yellow line's position based on the best value from the calibration info
-    // try every position in the cSize neighbourhood
-    val cache = mutable.HashMap.empty[String, Double]
-    var prevMinDiff = minDiff + 1
-    var nextLeft: Point = minSides._1
-    var nextRight: Point = minSides._2
-
-    while(minDiff < prevMinDiff) {
-      prevMinDiff = minDiff
-      minSides = (nextLeft, nextRight)
-      for (li <- -cSize to cSize; lj <- -cSize to cSize) {
-        for (ri <- -cSize to cSize; rj <- -cSize to cSize) {
-          val cleftPoint = new Point(minSides._1.x + li, minSides._1.y + lj)
-          val crightPoint = new Point(minSides._2.x + ri, minSides._2.y + rj)
-          val key = s"cleft: ${cleftPoint.x}x${cleftPoint.y} cright: ${crightPoint.x}x${crightPoint.y}"
-          val diffSum: Double = if (cache.contains(key)) {
-            cache.get(key).get
-          } else {
-            val x = getSumDiffByPoints(camPoint, cleftPoint, crightPoint, false)
-            cache.put(key, x)
-            x
-          }
-          if (diffSum <= minDiff) {
-//            println(s"$li, $lj - $ri, $rj   diff: ${diffSum * 100000} / 100000 cleft: ${cleftPoint.x}x${cleftPoint.y} cright: ${crightPoint.x}x${crightPoint.y}")
-            minDiff = Math.min(minDiff, diffSum)
-            nextLeft = cleftPoint
-            nextRight = crightPoint
-            result = s"<camx>${camPoint.x}</camx>\n<camy>${camPoint.y}</camy>\n<leftx>${cleftPoint.x}</leftx>\n<lefty>${cleftPoint.y}</lefty>\n<rightx>${crightPoint.x}</rightx>\n<righty>${crightPoint.y}</righty>\n"
-          }
-          //        println(f"$li%3d $lj%3d $ri%3d $rj%3d sumDiffRatio: ${diffSum*100000}%8.2f")
-        }
-      }
-      println(s"minDiff: ${minDiff*100000} prevDiff: ${prevMinDiff*100000} nextLeft: ${nextLeft.x}x${nextLeft.y} nextRight: ${nextRight.x}x${nextRight.y}")
-    }
-    println(f"minDiff: ${minDiff*100000}%.2f / 100000")
-
-//    Util.show(debug, s"Calibrating $camNum")
-    result
-  }
-
   /**
     * Draw a line from every two calibration points. If the closer point looks left from the camera's point of view
     * then the line is green. Otherwise it is red. Rightest green and the highest red point's intersection is
@@ -392,7 +262,7 @@ object DartsCalibration extends App{
     var maxGreen = (999999f, 0f, 0f, 0f, 0f)
 
     for(i <- 0 to calibPoints.size-2) {
-      for(j <- i to calibPoints.size-1) {
+      for(j <- i until calibPoints.size) {
         var p1 = calibPoints(i)
         var p2 = calibPoints(j)
         if (p1.boardY < p2.boardY) {
@@ -446,7 +316,7 @@ object DartsCalibration extends App{
     for (line <- bufferedSource.getLines) {
       val c = line.split(";").map(_.trim)
       if (c(0) == s"CalibPoint$camNum") {
-        calibPoints += CalibPoint(c(2).toDouble, c(3).toFloat, c(4).toFloat, num2coord.get(c(1)).get._1, num2coord.get(c(1)).get._2, c(1))
+        calibPoints += CalibPoint(c(2).toDouble, c(3).toFloat, c(4).toFloat, num2coord(c(1))._1, num2coord(c(1))._2, c(1))
       }
     }
 //    calibPoints map (c =>     println(s"CalibPoint${camNum};${c.ratio};${c.x};${c.y};${c.boardX};${c.boardY};${c.name}"))

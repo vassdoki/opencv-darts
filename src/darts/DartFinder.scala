@@ -130,7 +130,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
       1, // text thickness
       1, // Line type.
       false)
-    putText(debug, f"x: ${lastX} a: $lineFromCamA%f b: $lineFromCamB%f", new Point(20, 40),
+    putText(debug, f"x: $lastX a: $lineFromCamA%f b: $lineFromCamB%f", new Point(20, 40),
       FONT_HERSHEY_PLAIN, // font type
       1, // font scale
       Config.Red, // text color (here white)
@@ -147,33 +147,33 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
   def drawConfigArea(m: Mat) = {
     line(m,
       new Point(camConf.int("area/x"), camConf.int("area/y")),
-      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y"))),
+      new Point(camConf.int("area/x") + camConf.int("width"), camConf.int("area/y")),
       Config.Cyan, 1, 4, 0)
     //    line(m,
     //      new Point(10, 10),
     //      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y") - camConf.int("area/height"))),
     //      Green, 1, 4, 0)
     line(m,
-      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y"))),
-      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y") + camConf.int("area/height"))),
+      new Point(camConf.int("area/x") + camConf.int("width"), camConf.int("area/y")),
+      new Point(camConf.int("area/x") + camConf.int("width"), camConf.int("area/y") + camConf.int("area/height")),
       Config.Cyan, 1, 4, 0)
     line(m,
-      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/y") + camConf.int("area/height"))),
-      new Point(camConf.int("area/x"), (camConf.int("area/y") + camConf.int("area/height"))),
+      new Point(camConf.int("area/x") + camConf.int("width"), camConf.int("area/y") + camConf.int("area/height")),
+      new Point(camConf.int("area/x"), camConf.int("area/y") + camConf.int("area/height")),
       Config.Cyan, 1, 4, 0)
     line(m,
-      new Point(camConf.int("area/x"), (camConf.int("area/y") + camConf.int("area/height"))),
-      new Point(camConf.int("area/x"), (camConf.int("area/y"))),
+      new Point(camConf.int("area/x"), camConf.int("area/y") + camConf.int("area/height")),
+      new Point(camConf.int("area/x"), camConf.int("area/y")),
       Config.Cyan, 1, 4, 0)
 
     line(m,
       new Point(camConf.int("area/x"), camConf.int("area/zeroy")),
-      new Point(camConf.int("area/x") + camConf.int("width"), (camConf.int("area/zeroy"))),
+      new Point(camConf.int("area/x") + camConf.int("width"), camConf.int("area/zeroy")),
       Config.Red, 1, 4, 0)
 
     line(m,
-      new Point(camConf.int("area/x") + camConf.int("width")/2, (camConf.int("area/y"))),
-      new Point(camConf.int("area/x") + camConf.int("width")/2, (camConf.int("area/y") + camConf.int("area/height"))),
+      new Point(camConf.int("area/x") + camConf.int("width")/2, camConf.int("area/y")),
+      new Point(camConf.int("area/x") + camConf.int("width")/2, camConf.int("area/y") + camConf.int("area/height")),
       Config.Yellow, 1, 4, 0)
   }
 
@@ -193,56 +193,48 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     val cNonZero = countNonZero(mask)
 
     maskState = (prevNonZeroCount, cNonZero) match {
-      case (p, c) if (c < MinChange) => MaskState.EMPTY
-      case (p, c) if (Math.abs(c - p) < MinChange) => MaskState.MIN_CHANGE
-      case (p, c) if (Math.abs(c - p) >= MinChange) => MaskState.CHANGING
+      case (p, c) if c < MinChange => MaskState.EMPTY
+      case (p, c) if Math.abs(c - p) < MinChange => MaskState.MIN_CHANGE
+      case (p, c) if Math.abs(c - p) >= MinChange => MaskState.CHANGING
     }
 
     (state, maskState) match {
-      case (State.ALWAYS_ON, m) => {
+      case (State.ALWAYS_ON, m) =>
         // stay here unless EMPTY
         val x = processStableMask(mask, cNonZero, srcOrigParam)
-        resA = x._1; resB = x._2
-      }
-      case (State.EMPTY, MaskState.MIN_CHANGE) => {
+        resA = x._1
+        resB = x._2
+      case (State.EMPTY, MaskState.MIN_CHANGE) =>
         // if empty, reset the states
         resetState
         state = State.EMPTY
-      }
-      case (s, MaskState.EMPTY) => {
+      case (s, MaskState.EMPTY) =>
         // if empty, reset the states
         resetState
         state = State.EMPTY
-      }
-      case (State.STABLE, MaskState.CHANGING) => {
+      case (State.STABLE, MaskState.CHANGING) =>
         saveStableMask
         stableCount = 0
         state = State.CHANGING
-      }
-      case (s, MaskState.CHANGING) => {
+      case (s, MaskState.CHANGING) =>
         stableCount = 0
         state = State.CHANGING
-      }
-
-      case (State.REMOVING, m) => {
+      case (State.REMOVING, m) =>
         // stay here unless EMPTY
         state = State.REMOVING
-      }
-      case (State.CHANGING, MaskState.MIN_CHANGE) if (stableCount < MinStable) => {
+      case (State.CHANGING, MaskState.MIN_CHANGE) if stableCount < MinStable =>
         stableCount += 1
-      }
-      case (State.CHANGING, MaskState.MIN_CHANGE) if (stableCount >= MinStable) => {
+      case (State.CHANGING, MaskState.MIN_CHANGE) if stableCount >= MinStable =>
         state = State.STABLE
         dartsCount += 1
         saveNewStableMask
         val x = processStableMask(mask, cNonZero, srcOrigParam)
-        resA = x._1; resB = x._2
-      }
-      case (State.STABLE, MaskState.MIN_CHANGE) => {
+        resA = x._1
+        resB = x._2
+      case (State.STABLE, MaskState.MIN_CHANGE) =>
         stableCount += 1
-//        val x = processStableMask(mask, cNonZero, srcOrigParam, debug)
-//        resA = x._1; resB = x._2
-      }
+        //        val x = processStableMask(mask, cNonZero, srcOrigParam, debug)
+        //        resA = x._1; resB = x._2
     }
 //    println(s"cNonZero: $cNonZero prevZero: $prevNonZeroCount mState: $mState new state: $state")
 
@@ -320,7 +312,7 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     */
   def getYintersectionWithBoardSurface(a: Float, b: Float, camConf2: Config): (Float, Float) = {
     val y = camConf2.int("area/zeroy") - camConf2.int("area/y")
-    val x = ((y - b) / a)
+    val x = (y - b) / a
     (x, y)
   }
 
@@ -337,8 +329,8 @@ class DartFinder(val capture: CaptureDevice, val camConf: Config) {
     val src2 = srcOrig(new Rect(camConf.int("area/x"), camConf.int("area/y"), camConf.int("area/width"), camConf.int("area/height")))
     threshold(src2, mask, camConf.int("threshold/min"), camConf.int("threshold/max"), THRESH_BINARY)
     bitwise_not(mask, mask)
-    srcOrig.release
-    src2.release
+    srcOrig.release()
+    src2.release()
     mask
   }
 
