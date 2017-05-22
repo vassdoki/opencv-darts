@@ -267,12 +267,6 @@ object Main extends App{
 
     try {
       while (true) {
-        //      //                                      18(4)                               15(2)                                         7(16)                                            9(12)
-        ///Thread.sleep(300)
-
-        //      i3 = capture3.captureFrame(i3)
-        //      Util.show(i3, s"i3")
-
         val f1 = Future {
           dartFinder1.proc(null)
         }
@@ -283,8 +277,23 @@ object Main extends App{
         val r2 = Await.result(f2, 2 second)
 
         imgCount += 1
-        if (dartFinder1.state == dartFinder1.State.EMPTY) prevDartsCount1 = 0
-        if (dartFinder2.state == dartFinder1.State.EMPTY) prevDartsCount2 = 0
+        if (dartFinder1.state == dartFinder1.State.EMPTY) {
+          prevDartsCount1 = 0
+        }
+        if (dartFinder2.state == dartFinder1.State.EMPTY) {
+          prevDartsCount2 = 0
+        }
+        if (Config.bool("DEBUG_DART_FINDER")) {
+          val i1 = dartFinder1.debugLastProc
+          Util.show(i1, s"i1")
+          val i2 = dartFinder1.debugLastProc
+          Util.show(i2, s"i2")
+
+        }
+//        if ((dartFinder1.prevNonZeroCount >0 || dartFinder2.prevNonZeroCount > 0) && dartFinder1.prevNonZeroCount < 20000) {
+//          println(s"Cam1: State: ${dartFinder1.state} [${dartFinder1.maskState}] zero: ${dartFinder1.prevNonZeroCount} Darts:${dartFinder1.dartsCount}" +
+//            s"       Cam2: State: ${dartFinder2.state} [${dartFinder2.maskState}] zero: ${dartFinder2.prevNonZeroCount} Darts:${dartFinder2.dartsCount}")
+//        }
         if (
           (prevDartsCount1 < dartFinder1.dartsCount || prevDartsCount2 < dartFinder2.dartsCount)
             && (dartFinder1.state == dartFinder1.State.STABLE && dartFinder2.state == dartFinder2.State.STABLE)
@@ -301,7 +310,13 @@ object Main extends App{
 
           if (Config.bool("SERVER_USE")) {
             val url = s"${Config.str("SERVER_URL")}?num=$num&modifier=$mod"
-            scala.io.Source.fromURL(url).mkString
+            try {
+              scala.io.Source.fromURL(url).mkString
+            }catch {
+              case e: Exception =>
+                println(e)
+                e.printStackTrace()
+            }
           }
 
 
