@@ -32,6 +32,22 @@ Copy the config-sample.xml to config.xml and place it in the same directory as t
 Go through the comments in the config.xml and change the appropiate values.
 The videoDeviceNumber is important.
 
+## Test the installation
+
+You may test java, opencv and the camera with this command
+
+```bash
+java -cp darts-1.0-jar-with-dependencies.jar experimental.FpsTest
+```
+
+The result should look like this
+
+```text
+===== 11.3 fps
+===== 11.4 fps
+===== 11.4 fps
+```
+
 ## Configure the recognition software
 
 Run the program using the -config switch:
@@ -77,25 +93,22 @@ Place the dart in the far right tripple corner of the number shown on the screen
  it there until the counter reaches 0. Hold the dart in the right angle so that the red
  dot is where the dart is pointing.
 
-After this process a calib_points.csv is saved. Run the calibration.
-```bash
-java -cp darts-1.0-jar-with-dependencies.jar darts.DartsCalibration
-```
-There is no switch for that now. But it would run slowly on the rpi, so I would
-copy the csv to a strong computer, and raun the DartsCalibration.scala there.
-TBD: make this easier.
+After this process a calib_points.csv is saved. The calibration code is not included,
+send me the calib_points.csv and I will send you the calibration. This will be
+an online service later. My username is the same on gmail.
 
-The calibration prints the xml values to the output, copy those into the config.xml.
-TBD: Later this will be automatic.
 
 ## Scoreboard
 
 Setup the scoreboard server: https://github.com/IPeter/darts-go
 
+You can use my online scoreboard soon. If you are interested, send me an email.
+My gmail address is the same as my username here.
+
 ## Run the system
 
 ```bash
-java -jar darts-1.0-jar-with-dependencies.jar -calib
+java -jar darts-1.0-jar-with-dependencies.jar -run
 ```
 
 This is just a quick first version of the readme. Create an issue if you have any problems.
