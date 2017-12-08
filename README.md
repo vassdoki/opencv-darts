@@ -89,9 +89,12 @@ First save data for the calibration
 java -jar darts-1.0-jar-with-dependencies.jar -calib
 ```
 
-Place the dart in the far right tripple corner of the number shown on the screen. Keep
+Place the dart in the far right double corner of the number shown on the screen. Keep
  it there until the counter reaches 0. Hold the dart in the right angle so that the red
  dot is where the dart is pointing.
+ 
+![alt tag](https://github.com/vassdoki/opencv-darts/blob/master/docs/images/cali_order.png)
+
 
 After this process a calib_points.csv is saved. The calibration code is not included,
 send me the calib_points.csv and I will send you the calibration. This will be
