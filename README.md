@@ -106,7 +106,9 @@ an online service later. My username is the same on gmail.
 Setup the scoreboard server: https://github.com/IPeter/darts-go
 
 You can use my online scoreboard soon. If you are interested, send me an email.
-My gmail address is the same as my username here.
+My gmail address is the same as my username here. Here is some info
+about the online scoreboard: 
+https://github.com/vassdoki/darts-x01-scoreboard/blob/master/README.md
 
 ## Run the system
 
