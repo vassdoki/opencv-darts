@@ -1,3 +1,9 @@
+# This project is not supported any more
+
+I leave the code here, but right now I'm not releasing my work
+open source.
+
+
 # Darts hit recognition using opencv
 
 The goal of the project is to build a system that can provide a scoreboard for
