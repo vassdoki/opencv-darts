@@ -309,7 +309,7 @@ object Main extends App{
           prevDartsCount2 = dartFinder2.dartsCount
 
           if (Config.bool("SERVER_USE")) {
-            val url = s"${Config.str("SERVER_URL")}?num=$num&modifier=$mod"
+            val url = s"${Config.str("SERVER_URL")}?num=$num&mod=$mod&x=${point.x}&y=${point.y}&cam1img=&cam2img=&cam1x=&cam2x=&msg=Hello"
             try {
               scala.io.Source.fromURL(url).mkString
             }catch {
