@@ -1,7 +1,9 @@
-# This project is not supported any more
+# This project is an old project
 
 I leave the code here, but right now I'm not releasing my work
-open source.
+open source. I'm working on the commercial version which is
+diverted from this code quite a lot. If you are interested
+see www.dartsee.com
 
 
 # Darts hit recognition using opencv
@@ -14,11 +16,8 @@ The score recognition is done using two webcameras and opencv library.
 I'll provide a detailed description of how to setup the board, webcams, led strip
 lights and the software. 
 
-You may see the current status of the project here: https://youtu.be/oBwwNzYzmf8
+You may see the current status of the project here: https://www.youtube.com/channel/UCJ4G7xQRHF6RL3PTgsYAe1w/videos
 
-## Warning
-
-This software is under heavy development. It is not ready for anything yet.
 
 ## Build the cabinet
 
@@ -95,9 +94,10 @@ First save data for the calibration
 java -jar darts-1.0-jar-with-dependencies.jar -calib
 ```
 
-Place the dart in the far right double corner of the number shown on the screen. Keep
+Place the dart in the far right double corner of the number shown on the UI. Keep
  it there until the counter reaches 0. Hold the dart in the right angle so that the red
- dot is where the dart is pointing.
+ dot is where the dart is pointing. Repeat this from 6, 13, 4, ... bull as seen on the
+image below.
  
 ![alt tag](https://github.com/vassdoki/opencv-darts/blob/master/docs/images/cali_order.png)
 
@@ -109,12 +109,9 @@ an online service later. My username is the same on gmail.
 
 ## Scoreboard
 
-Setup the scoreboard server: https://github.com/IPeter/darts-go
-
-You can use my online scoreboard soon. If you are interested, send me an email.
-My gmail address is the same as my username here. Here is some info
-about the online scoreboard: 
-https://github.com/vassdoki/darts-x01-scoreboard/blob/master/README.md
+You may use dartsee online scoreboard. Here is an intro how it works: https://www.youtube.com/watch?v=2BHW8SJZbM4&t=1s
+The address is: http://game.eu.dartsee.com:8080/game/scoreboard/id
+Replace id with you dart boards uniqe id, e.g. your city and nickname.
 
 ## Run the system
 
@@ -122,4 +119,3 @@ https://github.com/vassdoki/darts-x01-scoreboard/blob/master/README.md
 java -jar darts-1.0-jar-with-dependencies.jar -run
 ```
 
-This is just a quick first version of the readme. Create an issue if you have any problems.
