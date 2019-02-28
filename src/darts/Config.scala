@@ -2,7 +2,6 @@ package darts
 
 import org.joda.time.format.DateTimeFormat
 
-import scala.util.parsing.json.JSON
 import scala.xml.{NodeSeq, XML}
 import java.io.File
 
