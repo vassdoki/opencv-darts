@@ -35,14 +35,15 @@ Compile the package with mvn package. If you are building for rpi, use the build
 
 Copy the config-sample.xml to config.xml and place it in the same directory as the jar.
 Go through the comments in the config.xml and change the appropiate values.
-The videoDeviceNumber is important.
+The BOARD_ID and videoDeviceNumber is important.
 
 ## Test the installation
 
 You may test java, opencv and the camera with this command
 
 ```bash
-java -cp darts-1.0-jar-with-dependencies.jar experimental.FpsTest
+java -cp darts-1.0-jar-with-dependencies.jar experimental.FpsTest --help
+java -cp darts-1.0-jar-with-dependencies.jar experimental.FpsTest --cam 0 --width 640 --height 480
 ```
 
 The result should look like this
