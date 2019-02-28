@@ -1,12 +1,17 @@
 <DartsConfig>
+    <CAPTURE_WIDTH>640</CAPTURE_WIDTH>
+    <CAPTURE_HEIGHT>480</CAPTURE_HEIGHT>
+
+    <BOARD_ID>PLEASE_CHANGE_THIS</BOARD_ID> <!-- enter you cityName_username here -->
+    <SERVER_HOST>http://http://game.eu.dartsee.com:8080</SERVER_HOST>
+    <SERVER_USE>1</SERVER_USE> <!-- turn on web scoreboard -->
+    <CALIBRATION_SERVER>http://game.eu.dartsee.com:8080/calibrate</CALIBRATION_SERVER>
+
     <SAVE_CAPTURED>0</SAVE_CAPTURED> <!-- save the captured images to OUTPUT_DIR -->
-    <USE_SAVED_IMAGES>1</USE_SAVED_IMAGES> <!-- 0: use the camera, 1: use the saved images -->
+    <USE_SAVED_IMAGES>0</USE_SAVED_IMAGES> <!-- 0: use the camera, 1: use the saved images -->
     <START_OVER>1</START_OVER> <!-- in case of USE_SAVED_IMAGES == 1, 1: restart from the beginning of the file list -->
     <OUTPUT_DIR>/tmp/</OUTPUT_DIR> <!-- directory to save captured images, if SAVE_CAPTURED == 1 -->
     <INPUT_DIR>example/sample-images/</INPUT_DIR> <!-- directory to read all files from if USE_SAVED_IMAGES == 1 -->
-
-    <SERVER_URL>http://192.168.3.60:8080/cam/command</SERVER_URL> <!-- save result to url if SERVER_USE == 1 -->
-    <SERVER_USE>0</SERVER_USE> <!-- turn on web scoreboard -->
 
     <DEBUG_DART_FINDER>0</DEBUG_DART_FINDER>
     <DEBUG_MAIN>0</DEBUG_MAIN>
@@ -15,8 +20,8 @@
     <DEBUG_FPS>0</DEBUG_FPS> <!-- print FPS info to stdout -->
 
 
-    <camera name="vassdoki test setup right" camId="1">
-        <videoDeviceNumber>1</videoDeviceNumber> <!-- /dev/videoX value -->
+    <camera name="left" camId="0">
+        <videoDeviceNumber>0</videoDeviceNumber> <!-- /dev/videoX value -->
         <area> <!-- area of interest on the captured image, this should be absolutely white, if there are no darts in the board -->
             <x>0</x>
             <y>156</y>
@@ -39,8 +44,8 @@
     </camera>
 
 
-    <camera name="vassdoki test setup left" camId="2">
-        <videoDeviceNumber>2</videoDeviceNumber>
+    <camera name="right" camId="1">
+        <videoDeviceNumber>1</videoDeviceNumber>
         <area>
             <x>0</x>
             <y>232</y>

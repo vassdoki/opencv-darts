@@ -265,6 +265,8 @@ object Main extends App{
 
     val points = new mutable.HashSet[Point]
 
+    var emptyBoardSent = true
+
     try {
       while (true) {
         val f1 = Future {
@@ -294,11 +296,16 @@ object Main extends App{
 //          println(s"Cam1: State: ${dartFinder1.state} [${dartFinder1.maskState}] zero: ${dartFinder1.prevNonZeroCount} Darts:${dartFinder1.dartsCount}" +
 //            s"       Cam2: State: ${dartFinder2.state} [${dartFinder2.maskState}] zero: ${dartFinder2.prevNonZeroCount} Darts:${dartFinder2.dartsCount}")
 //        }
+        if (dartFinder1.dartsCount == 0 && dartFinder2.dartsCount == 0 && !emptyBoardSent) {
+          sendEmtpyBoard
+          emptyBoardSent = true
+        }
         if (
           (prevDartsCount1 < dartFinder1.dartsCount || prevDartsCount2 < dartFinder2.dartsCount)
             && (dartFinder1.state == dartFinder1.State.STABLE && dartFinder2.state == dartFinder2.State.STABLE)
             && (dartFinder1.dartsCount <= 3 && dartFinder2.dartsCount <= 3)
         ) {
+          emptyBoardSent = false
           var xc = (dartFinder2.lineFromCamB - dartFinder1.lineFromCamB) / (dartFinder1.lineFromCamA - dartFinder2.lineFromCamA)
           var yc = xc * dartFinder1.lineFromCamA + dartFinder1.lineFromCamB
           val point = new Point(xc.toInt, yc.toInt)
@@ -308,17 +315,7 @@ object Main extends App{
           prevDartsCount1 = dartFinder1.dartsCount
           prevDartsCount2 = dartFinder2.dartsCount
 
-          if (Config.bool("SERVER_USE")) {
-            val url = s"${Config.str("SERVER_URL")}?num=$num&mod=$mod&x=${point.x}&y=${point.y}&cam1img=&cam2img=&cam1x=&cam2x=&msg=Hello"
-            try {
-              scala.io.Source.fromURL(url).mkString
-            }catch {
-              case e: Exception =>
-                println(e)
-                e.printStackTrace()
-            }
-          }
-
+          sendScore(s"num=$num&mod=$mod&x=${point.x}&y=${point.y}&cam1img=&cam2img=&cam1x=&cam2x=&msg=Hello")
 
           if (Config.bool("DEBUG_MAIN")) {
             debug2.setTo(BlackMat)
@@ -376,5 +373,41 @@ object Main extends App{
     Profile.end("01 - App")
     Profile.print
   }
+
+  /**
+    * Send the score to the server
+    * @param getParams
+    */
+  def sendScore(getParams: String): Unit = {
+    if (Config.bool("SERVER_USE")) {
+      Future({
+        val url = s"${Config.str("SERVER_HOST")}/command/newThrow/${Config.str("BOARD_ID")}?$getParams"
+        try {
+          val res: String = scala.io.Source.fromURL(url).mkString
+        } catch {
+          case e: Exception =>
+            println(e)
+            println(s"url: $url")
+        }})
+    }
+  }
+
+
+  /**
+    * Send nextPlayer command to the server if the dart board is empty again
+    */
+  def sendEmtpyBoard = {
+    if (Config.bool("SERVER_USE")) {
+      val url = s"${Config.str("SERVER_HOST")}/command/nextPlayer/${Config.str("BOARD_ID")}"
+      try {
+        val res: String = scala.io.Source.fromURL(url).mkString
+      } catch {
+        case e: Exception =>
+          println(e)
+          println(s"url: $url")
+      }
+    }
+  }
+
 
 }
