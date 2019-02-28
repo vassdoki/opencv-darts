@@ -200,14 +200,7 @@ object Main extends App{
 
     try {
       while (true) {
-        val f1 = Future {
-          dartFinder1.proc(null)
-        }
-        val f2 = Future {
-          dartFinder2.proc(null)
-        }
-        val r1 = Await.result(f1, 2 second)
-        val r2 = Await.result(f2, 2 second)
+        List(dartFinder1, dartFinder2).par.foreach(df => df.proc(null))
 
         imgCount += 1
         if (dartFinder1.state == dartFinder1.State.EMPTY) {
