@@ -109,7 +109,7 @@ object FpsTest extends App{
             println(s"Read image is null")
           }
           if (imgs(c) != null && (imgs(c).rows == 0 || imgs(c).cols == 0)) {
-            println(s"c size == 0")
+            println(s"Image read from camera(i) has size == 0")
           }
           if (defaults('showWindow).asInstanceOf[Boolean]) {
             Util.show(imgs(c), s"cam: $i")
@@ -137,7 +137,7 @@ object FpsTest extends App{
             println(s"Read image is null")
           }
           if (imgs(c) != null && (imgs(c).rows == 0 || imgs(c).cols == 0)) {
-            println(s"c size == 0")
+            println(s"Image read from camera(i) has size == 0")
           }
           if (defaults('showWindow).asInstanceOf[Boolean]) {
             Util.show(imgs(c), s"cam: $i")
